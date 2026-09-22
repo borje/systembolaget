@@ -235,6 +235,72 @@ def show(
         print_detail(product)
 
 
+@app.command()
+def stock(
+    ctx: typer.Context,
+    product_number: Annotated[str, typer.Argument(help="Artikelnummer, t.ex. 262708.")],
+    store: Annotated[str | None, typer.Option("--store", help="Filtrera på butiksnamn eller ort.")] = None,
+    fmt: Annotated[str, typer.Option("--format", "-f", help="table eller json.")] = "table",
+) -> None:
+    """Visa lagersaldo per butik för en produkt."""
+    with _client(ctx) as client:
+        try:
+            product = client.product(product_number)
+            product_id = product["productId"]
+            if store:
+                needle = store.casefold()
+                sites = [
+                    s for s in client.stores()
+                    if needle in (s.get("displayName") or s.get("alias") or "").casefold()
+                    or needle in (s.get("city") or "").casefold()
+                    or needle in (s.get("streetAddress") or "").casefold()
+                ]
+                if not sites:
+                    _fail(f"Ingen butik matchar '{store}'.")
+                    return
+                stocks = []
+                for site in sites:
+                    balance = client.store_stock_at(site["siteId"], product_id)
+                    if balance.get("stock"):
+                        stocks.append({
+                            "store": {
+                                "alias": site.get("displayName") or site.get("alias"),
+                                "address": site.get("streetAddress"),
+                                "city": site.get("city"),
+                            },
+                            "stockBalance": balance,
+                        })
+            else:
+                stocks = client.store_stock(product_id)
+        except ApiError as exc:
+            _fail(str(exc))
+            return
+
+    stocks.sort(key=lambda s: s["stockBalance"]["stock"], reverse=True)
+
+    if fmt == "json":
+        dump_json(stocks)
+        return
+
+    from rich.table import Table
+
+    name = product_name(product)
+    table = Table(title=f"{name} — {len(stocks)} butiker i lager", header_style="bold cyan")
+    for column in ("Butik", "Adress", "Ort", "Antal", "Hylla"):
+        table.add_column(column, overflow="fold")
+    for entry in stocks:
+        site = entry["store"]
+        balance = entry["stockBalance"]
+        table.add_row(
+            site.get("alias") or "",
+            site.get("address") or "",
+            site.get("city") or "",
+            str(balance.get("stock", "")),
+            balance.get("shelf") or "",
+        )
+    console.print(table)
+
+
 @app.command("like")
 def like(
     ctx: typer.Context,

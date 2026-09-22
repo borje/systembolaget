@@ -22,6 +22,7 @@ is already active.
 | What values can I filter on? | `sb facets [FILTER]` |
 | Food pairing options | `sb pairings` |
 | Stores and opening addresses | `sb stores` |
+| Which stores have a product in stock right now | `sb stock NUMBER [--store NAME]` |
 | Export the catalogue | `sb dump` |
 
 Always pass `-n` to bound the result count, and prefer `-f json` when you need
@@ -188,6 +189,9 @@ per product, so a whole-catalogue dump runs for hours; use `--category` or
 
 ## Notes and limits
 
+- When presenting a drink by name, always list its Systembolaget article
+  number (artikelnummer) alongside the name — the user needs it to find or
+  order the product.
 - Output formats: `table` (default), `json`, `ndjson`, `csv`. Tables are for
   humans; parse `json`/`ndjson`.
 - `--sort` accepts `Score`, `Price`, `Vintage`, `Volume`, `Name`,
@@ -196,6 +200,10 @@ per product, so a whole-catalogue dump runs for hours; use `--category` or
 - The reported result count runs slightly ahead of what the API will actually
   return, so a complete crawl can come back a few products short. That is the
   API's behaviour, not a bug in the crawl.
-- Prices are current catalogue prices in SEK; stock levels are not exposed.
+- Prices are current catalogue prices in SEK. Per-store stock levels are
+  available via `sb stock`; `sb search`/`sb show` only expose the coarse
+  `availableNumberOfStores` count, not which stores or how much. `sb stock
+  NUMBER --store NAME` is cheap (one lookup per matching store); without
+  `--store` it fetches stock across all ~900 stores in one call.
 - Be polite: the default 0.1 s gap between requests is there for a reason.
   Lower it with `--rate-limit` only for a one-off bulk export.

@@ -152,6 +152,21 @@ class Client:
         payload = self.get("/v1/sitesearch/site/")
         return payload.get("siteSearchResults", [])
 
+    def store_stock(self, product_id: str) -> list[dict[str, Any]]:
+        """Per-store stock for a product, keyed by its internal ``productId``.
+
+        Not the same as ``productNumber`` — callers get it from ``product()``.
+        Only stores that currently hold the product appear in the result.
+        """
+        payload = self.get(f"/v1/site/stores/{product_id}/")
+        return payload.get("storeStocks", [])
+
+    def store_stock_at(self, site_id: str, product_id: str) -> dict[str, Any]:
+        """Stock for one product at one store — cheaper than ``store_stock``
+        when only a specific store is of interest.
+        """
+        return self.get(f"/v1/stockbalance/store/{site_id}/{product_id}")
+
     def iter_products(
         self,
         params: dict[str, Any],
