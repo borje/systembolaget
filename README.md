@@ -77,13 +77,18 @@ sb facets grape -c Vin      # all 300 grape varieties
 ```bash
 sb dump -o catalogue.ndjson        # everything
 sb dump -c Vin -f csv -o wine.csv  # one category, spreadsheet-friendly
-sb dump --full -o rich.ndjson      # all 137 fields per product (slow)
+sb dump -c Vin -n 100 -o try.ndjson  # a taste of it, for trying things out
 ```
 
 The search endpoint silently drops results on deep pages, so `dump` splits the
 query into small buckets (category → subcategory → country → price band) that
 page reliably, then de-duplicates. On a spot check of Swedish beer this lifts
 coverage from 95.9 % to 100 %.
+
+Every product is then looked up individually, so the dump always carries the
+complete ~137-field record rather than the ~70 fields search returns. That is
+one request per product: a full catalogue takes hours, so narrow it with
+`--category` or `--limit` unless you really want all of it.
 
 ### Output formats
 

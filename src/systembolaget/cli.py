@@ -196,14 +196,24 @@ def search(
 
 
 def _enrich(client: Client, product: dict[str, Any]) -> dict[str, Any]:
-    """Replace a search hit with its complete record, if it can be fetched."""
+    """Merge a search hit with its complete record, if it can be fetched.
+
+    Neither record contains the other.  The full one adds raw materials,
+    aroma, producer prose and nutrition, but drops ``price``, ``volumeText``
+    and a few flags the search hit carries, and leaves some taste clocks null
+    where the search hit has a number.  So the search hit is the base and only
+    the full record's non-empty values are laid on top.
+    """
     number = product.get("productNumber")
     if not number:
         return product
     try:
-        return client.product(number)
+        full = client.product(number)
     except ApiError:
         return product
+    merged = dict(product)
+    merged.update({k: v for k, v in full.items() if v not in (None, "", [], {})})
+    return merged
 
 
 @app.command()
@@ -412,19 +422,23 @@ def dump(
         help="Fil att skriva till. '-' för stdout.")] = Path("systembolaget.ndjson"),
     category: Annotated[Optional[list[str]], typer.Option("--category", "-c",
         help="Begränsa till en kategori.")] = None,
-    full: Annotated[bool, typer.Option("--full",
-        help="Hämta hela produktposten (137 fält) för varje produkt. Tar timmar.")] = False,
     fmt: Annotated[str, typer.Option("--format", "-f", help="ndjson, json eller csv.")] = "ndjson",
     limit: Annotated[Optional[int], typer.Option("--limit", "-n",
         help="Sluta efter N produkter (för test).")] = None,
 ) -> None:
-    """Ladda ner hela sortimentet.
+    """Ladda ner hela sortimentet med fullständiga produktposter.
 
     Söktjänsten tappar träffar på djupa sidor, så katalogen hämtas genom att
     dela upp sökningen i mindre delmängder (kategori, land, prisintervall) som
     var för sig går att bläddra igenom tillförlitligt. Dubbletter filtreras
     bort, så resultatet kan innehålla något färre poster än API:ets egen
     räknare anger.
+
+    Varje träff slås sedan upp på produkt-endpointen, eftersom söksvaret bara
+    bär ~70 av produktens ~137 fält: råvaror, aroma, producent- och
+    terroirtexter, näringsvärden och kuriosa finns bara i den fulla posten.
+    Det kostar ett anrop per produkt, så en full katalog tar timmar. Begränsa
+    med --category eller --limit när du inte behöver allt.
     """
     params = build_query(terms={"category": category or []})
     written = 0
@@ -443,10 +457,9 @@ def dump(
             stream = sys.stdout if str(output) == "-" else output.open("w", encoding="utf-8")
             try:
                 products = crawl_all(client, params, progress=report)
-                if full:
-                    products = (_enrich(client, p) for p in products)
                 if limit is not None:
                     products = _take(products, limit)
+                products = (_enrich(client, p) for p in products)
 
                 if fmt == "ndjson":
                     total = dump_ndjson(products, stream)

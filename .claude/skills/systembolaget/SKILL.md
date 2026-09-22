@@ -168,13 +168,19 @@ sb search --grape Nebbiolo --full -f json -n 20 > nebbiolo.json
 sb dump -o catalogue.ndjson              # everything, ~27 000 products
 sb dump -c Vin -o wine.ndjson            # one category
 sb dump -c Vin -f csv -o wine.csv        # spreadsheet-friendly subset
-sb dump --full -o rich.ndjson            # all 137 fields — hours, ~27k requests
+sb dump -c Vin -n 100 -o sample.ndjson   # a sample, to see the shape first
 ```
 
 The search endpoint drops results on deep pages, so `dump` splits the query
 into small buckets (category → subcategory → country → price band) that page
 reliably, and de-duplicates. Progress goes to stderr, data to the file, so
 `-o -` pipes cleanly.
+
+`dump` always writes complete ~137-field records, looking each product up
+individually, so a dump is a superset of what `sb search` returns — raw
+materials, aroma, producer prose and nutrition included. That costs one request
+per product, so a whole-catalogue dump runs for hours; use `--category` or
+`--limit` when a slice will do.
 
 ## Notes and limits
 
