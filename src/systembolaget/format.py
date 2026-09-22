@@ -5,7 +5,8 @@ from __future__ import annotations
 import csv
 import json
 import sys
-from typing import Any, Iterable, Sequence
+from collections.abc import Iterable, Sequence
+from typing import Any
 
 from rich.console import Console
 from rich.table import Table

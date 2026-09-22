@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any
 
 import typer
 
@@ -79,53 +79,53 @@ def main(
 @app.command()
 def search(
     ctx: typer.Context,
-    text: Annotated[Optional[str], typer.Argument(
+    text: Annotated[str | None, typer.Argument(
         help="Fritext, t.ex. namn, producent eller druva.")] = None,
     # Categorical filters
-    category: Annotated[Optional[list[str]], typer.Option("--category", "-c",
+    category: Annotated[list[str] | None, typer.Option("--category", "-c",
         help="Vin, Öl, Sprit, Cider & blanddrycker, Alkoholfritt.")] = None,
-    subcategory: Annotated[Optional[list[str]], typer.Option("--subcategory",
+    subcategory: Annotated[list[str] | None, typer.Option("--subcategory",
         help="T.ex. 'Rött vin', 'Whisky', 'IPA'.")] = None,
-    style: Annotated[Optional[list[str]], typer.Option("--style",
+    style: Annotated[list[str] | None, typer.Option("--style",
         help="T.ex. 'Fruktigt & Smakrikt'.")] = None,
-    country: Annotated[Optional[list[str]], typer.Option("--country",
+    country: Annotated[list[str] | None, typer.Option("--country",
         help="Ursprungsland.")] = None,
-    region: Annotated[Optional[list[str]], typer.Option("--region",
+    region: Annotated[list[str] | None, typer.Option("--region",
         help="Region, t.ex. 'Toscana'.")] = None,
-    producer: Annotated[Optional[list[str]], typer.Option("--producer", help="Producent.")] = None,
-    grape: Annotated[Optional[list[str]], typer.Option("--grape",
+    producer: Annotated[list[str] | None, typer.Option("--producer", help="Producent.")] = None,
+    grape: Annotated[list[str] | None, typer.Option("--grape",
         help="Druva, t.ex. 'Nebbiolo'.")] = None,
-    pairs_with: Annotated[Optional[list[str]], typer.Option("--pairs-with", "-p",
+    pairs_with: Annotated[list[str] | None, typer.Option("--pairs-with", "-p",
         help="Passar till, t.ex. 'Grillat'. Se 'sb pairings'.")] = None,
-    vintage: Annotated[Optional[list[str]], typer.Option("--vintage", help="Årgång.")] = None,
-    assortment: Annotated[Optional[list[str]], typer.Option("--assortment",
+    vintage: Annotated[list[str] | None, typer.Option("--vintage", help="Årgång.")] = None,
+    assortment: Annotated[list[str] | None, typer.Option("--assortment",
         help="T.ex. 'Fast sortiment'.")] = None,
-    packaging: Annotated[Optional[list[str]], typer.Option("--packaging",
+    packaging: Annotated[list[str] | None, typer.Option("--packaging",
         help="T.ex. 'Box', 'Burk'.")] = None,
-    seal: Annotated[Optional[list[str]], typer.Option("--seal",
+    seal: Annotated[list[str] | None, typer.Option("--seal",
         help="Förslutning, t.ex. 'Skruvkapsyl'.")] = None,
-    trait: Annotated[Optional[list[str]], typer.Option("--trait",
+    trait: Annotated[list[str] | None, typer.Option("--trait",
         help="Vegansk, Naturvin eller Koscher.")] = None,
-    oaked: Annotated[Optional[str], typer.Option("--oaked",
+    oaked: Annotated[str | None, typer.Option("--oaked",
         help="'Fatlagrad' eller 'Inte fatlagrad'.")] = None,
     organic: Annotated[bool, typer.Option("--organic", help="Endast ekologiskt.")] = False,
-    new: Annotated[Optional[str], typer.Option("--new",
+    new: Annotated[str | None, typer.Option("--new",
         help="T.ex. 'Nytt senaste månaden'.")] = None,
-    co2: Annotated[Optional[str], typer.Option("--co2",
+    co2: Annotated[str | None, typer.Option("--co2",
         help="Förpackningens klimatavtryck: Lägre, Medel, Högre.")] = None,
     # Numeric ranges
-    price: Annotated[Optional[str], typer.Option("--price",
+    price: Annotated[str | None, typer.Option("--price",
         help="Prisintervall i kr, t.ex. 100-200, 100- eller -150.")] = None,
-    volume: Annotated[Optional[str], typer.Option("--volume", help="Volym i ml.")] = None,
-    alcohol: Annotated[Optional[str], typer.Option("--alcohol",
+    volume: Annotated[str | None, typer.Option("--volume", help="Volym i ml.")] = None,
+    alcohol: Annotated[str | None, typer.Option("--alcohol",
         help="Alkoholhalt i procent, t.ex. 0-0.5.")] = None,
-    sugar: Annotated[Optional[str], typer.Option("--sugar", help="Sockerhalt i g/l.")] = None,
-    body: Annotated[Optional[str], typer.Option("--body", help="Fyllighet 0-12.")] = None,
-    roughness: Annotated[Optional[str], typer.Option("--roughness", help="Strävhet 0-12.")] = None,
-    fruitacid: Annotated[Optional[str], typer.Option("--fruitacid", help="Fruktsyra 0-12.")] = None,
-    sweetness: Annotated[Optional[str], typer.Option("--sweetness", help="Sötma 0-12.")] = None,
-    bitterness: Annotated[Optional[str], typer.Option("--bitterness", help="Beska 0-12.")] = None,
-    smokiness: Annotated[Optional[str], typer.Option("--smokiness", help="Rökighet 0-12.")] = None,
+    sugar: Annotated[str | None, typer.Option("--sugar", help="Sockerhalt i g/l.")] = None,
+    body: Annotated[str | None, typer.Option("--body", help="Fyllighet 0-12.")] = None,
+    roughness: Annotated[str | None, typer.Option("--roughness", help="Strävhet 0-12.")] = None,
+    fruitacid: Annotated[str | None, typer.Option("--fruitacid", help="Fruktsyra 0-12.")] = None,
+    sweetness: Annotated[str | None, typer.Option("--sweetness", help="Sötma 0-12.")] = None,
+    bitterness: Annotated[str | None, typer.Option("--bitterness", help="Beska 0-12.")] = None,
+    smokiness: Annotated[str | None, typer.Option("--smokiness", help="Rökighet 0-12.")] = None,
     # Output
     limit: Annotated[int, typer.Option("--limit", "-n", help="Antal träffar.")] = 20,
     sort_by: Annotated[str, typer.Option("--sort",
@@ -242,7 +242,7 @@ def like(
     tolerance: Annotated[int, typer.Option("--tolerance", "-t",
         help="Hur mycket smakklockorna får avvika (0-6).")] = 1,
     limit: Annotated[int, typer.Option("--limit", "-n", help="Antal förslag.")] = 20,
-    price: Annotated[Optional[str], typer.Option("--price", help="Begränsa priset, t.ex. -200.")] = None,
+    price: Annotated[str | None, typer.Option("--price", help="Begränsa priset, t.ex. -200.")] = None,
     any_category: Annotated[bool, typer.Option("--any-category",
         help="Tillåt träffar utanför samma kategori.")] = False,
     match_pairings: Annotated[bool, typer.Option("--match-pairings",
@@ -315,11 +315,11 @@ def pairings() -> None:
 @app.command()
 def facets(
     ctx: typer.Context,
-    field: Annotated[Optional[str], typer.Argument(
+    field: Annotated[str | None, typer.Argument(
         help="Filternamn, t.ex. country, grape, subcategory. Utelämna för lista.")] = None,
-    category: Annotated[Optional[list[str]], typer.Option("--category", "-c",
+    category: Annotated[list[str] | None, typer.Option("--category", "-c",
         help="Begränsa till en kategori.")] = None,
-    text: Annotated[Optional[str], typer.Option("--text", help="Begränsa till en fritextsökning.")] = None,
+    text: Annotated[str | None, typer.Option("--text", help="Begränsa till en fritextsökning.")] = None,
 ) -> None:
     """Visa vilka värden ett filter kan ta, för det aktuella urvalet.
 
@@ -376,7 +376,7 @@ def facets(
 @app.command()
 def stores(
     ctx: typer.Context,
-    city: Annotated[Optional[str], typer.Option("--city", help="Filtrera på ort.")] = None,
+    city: Annotated[str | None, typer.Option("--city", help="Filtrera på ort.")] = None,
     fmt: Annotated[str, typer.Option("--format", "-f", help="table, json, ndjson.")] = "table",
 ) -> None:
     """Lista Systembolagets butiker och ombud."""
@@ -420,10 +420,10 @@ def dump(
     ctx: typer.Context,
     output: Annotated[Path, typer.Option("--output", "-o",
         help="Fil att skriva till. '-' för stdout.")] = Path("systembolaget.ndjson"),
-    category: Annotated[Optional[list[str]], typer.Option("--category", "-c",
+    category: Annotated[list[str] | None, typer.Option("--category", "-c",
         help="Begränsa till en kategori.")] = None,
     fmt: Annotated[str, typer.Option("--format", "-f", help="ndjson, json eller csv.")] = "ndjson",
-    limit: Annotated[Optional[int], typer.Option("--limit", "-n",
+    limit: Annotated[int | None, typer.Option("--limit", "-n",
         help="Sluta efter N produkter (för test).")] = None,
 ) -> None:
     """Ladda ner hela sortimentet med fullständiga produktposter.
@@ -493,11 +493,11 @@ def _take(iterable: Any, count: int) -> Any:
 @app.command()
 def random(
     ctx: typer.Context,
-    category: Annotated[Optional[list[str]], typer.Option("--category", "-c",
+    category: Annotated[list[str] | None, typer.Option("--category", "-c",
         help="Begränsa till en kategori.")] = None,
-    pairs_with: Annotated[Optional[list[str]], typer.Option("--pairs-with", "-p",
+    pairs_with: Annotated[list[str] | None, typer.Option("--pairs-with", "-p",
         help="Passar till.")] = None,
-    price: Annotated[Optional[str], typer.Option("--price", help="Prisintervall.")] = None,
+    price: Annotated[str | None, typer.Option("--price", help="Prisintervall.")] = None,
     limit: Annotated[int, typer.Option("--limit", "-n", help="Antal förslag.")] = 5,
 ) -> None:
     """Slumpa fram förslag — för när man inte vet vad man vill ha."""

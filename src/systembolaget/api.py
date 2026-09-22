@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Any, Iterator
+from collections.abc import Iterator
+from typing import Any, Self
 
 import httpx
 
@@ -64,7 +65,7 @@ class Client:
             },
         )
 
-    def __enter__(self) -> "Client":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc: object) -> None:

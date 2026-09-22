@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Iterator
+from typing import Any
 
 from .api import Client
 from .filters import (
@@ -22,7 +23,7 @@ class Query:
 
     params: dict[str, Any] = field(default_factory=dict)
 
-    def add_term(self, name: str, values: Iterable[str]) -> "Query":
+    def add_term(self, name: str, values: Iterable[str]) -> Query:
         values = [v for v in values if v]
         if not values:
             return self
@@ -34,7 +35,7 @@ class Query:
         existing.extend(values)
         return self
 
-    def add_range(self, name: str, spec: str) -> "Query":
+    def add_range(self, name: str, spec: str) -> Query:
         try:
             rf = RANGE_FILTERS[name]
         except KeyError as exc:
@@ -43,12 +44,12 @@ class Query:
         self.params.update(rf.render(low, high))
         return self
 
-    def add_bounds(self, name: str, low: float | None, high: float | None) -> "Query":
+    def add_bounds(self, name: str, low: float | None, high: float | None) -> Query:
         rf = RANGE_FILTERS[name]
         self.params.update(rf.render(low, high))
         return self
 
-    def set(self, key: str, value: Any) -> "Query":
+    def set(self, key: str, value: Any) -> Query:
         if value is not None:
             self.params[key] = value
         return self
@@ -230,8 +231,7 @@ def crawl_all(
         ("country", "country"),
     ]
 
-    for product in _crawl_bucket(client, base_params, splits, seen, progress):
-        yield product
+    yield from _crawl_bucket(client, base_params, splits, seen, progress)
 
 
 def _crawl_bucket(
