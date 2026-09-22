@@ -13,6 +13,7 @@ dependencies = [
 
 [project.scripts]
 sb = "systembolaget.cli:app"
+vivino = "systembolaget.vivino_cli:app"
 
 [dependency-groups]
 dev = [

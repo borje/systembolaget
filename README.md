@@ -115,10 +115,22 @@ with Client() as client:
         print(product["productNumber"], product["productNameBold"])
 ```
 
-## Agent skill
+## Vivino ratings
 
-`.claude/skills/systembolaget/SKILL.md` teaches Claude Code to drive this CLI,
-including how to translate Swedish taste vocabulary into filters.
+`vivino search TEXT` / `vivino show VINTAGE_ID` / `vivino reviews WINE_ID`
+look up ratings and reviews on Vivino, e.g. to check whether a Systembolaget
+find is any good. No account or API key needed.
+
+```bash
+uv run vivino search "Barolo Albe G.D. Vajra"
+uv run vivino show 160828241
+```
+
+## Agent skills
+
+`.claude/skills/systembolaget/SKILL.md` and `.claude/skills/vivino/SKILL.md`
+teach Claude Code to drive these CLIs, including how to translate Swedish
+taste vocabulary into filters and how to read Vivino's rating fields.
 
 ## Development
 
