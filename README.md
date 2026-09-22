@@ -9,9 +9,13 @@ built in, and can be overridden with `SYSTEMBOLAGET_API_KEY` if it rotates.
 ## Installation
 
 ```bash
-uv sync
-uv run sb --help
+uv tool install .   # puts `sb` on your PATH
+sb --help
 ```
+
+Working on the code instead? `uv run sb ...` runs the CLI straight from the
+checkout, no install needed — that's the form the rest of this README's
+examples omit.
 
 ## Usage
 
