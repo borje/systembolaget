@@ -64,7 +64,8 @@ Aperitif Avec/digestif Drinkingrediens Sällskapsdryck
 
 Map the dish to the nearest one — *entrecôte* → `Nöt`, *räkor* → `Skaldjur`,
 *curry* → `Kryddstarkt`, *tacos* → `Kryddstarkt`, *fredagsmys* →
-`Sällskapsdryck`. If nothing fits, use `--text` free text instead of guessing.
+`Sällskapsdryck`. If nothing fits, pass free text as the positional argument
+instead of guessing: `sb search "Hernö" -c Sprit`.
 
 Every categorical flag repeats, and repeating it means OR:
 
@@ -142,6 +143,9 @@ drinks whose clocks sit within `±tolerance` (default 1), then ranks them by
 mean distance. The `Likhet` column is that distance in clock steps, so `0.00`
 is an exact profile match.
 
+- `like` takes only `--tolerance`, `--price`, `--any-category`,
+  `--match-pairings`, `-n` and `-f`. Other `search` filters such as `--country`
+  are not accepted; narrow the result afterwards or fall back to `sb search`.
 - `--tolerance 0` demands an identical profile; `3` or more casts wide.
 - `--any-category` allows crossing from, say, red wine into port.
 - `--match-pairings` additionally requires the same food symbols.
