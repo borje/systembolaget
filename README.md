@@ -215,3 +215,7 @@ The API is undocumented and reverse-engineered from the website. It ignores
 unrecognised parameters rather than rejecting them, so filters are validated
 client-side before being sent. Please keep request rates polite; the default
 is one request per 100 ms.
+
+## License
+
+AGPL-3.0-or-later. See [LICENSE](LICENSE).
