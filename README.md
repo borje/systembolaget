@@ -1,23 +1,94 @@
 # systembolaget
 
-A Python CLI for searching Systembolaget's drink catalogue (~27 000 products)
-through the same public REST API that systembolaget.se uses in the browser.
+Ask Claude Code about drinks, and let it search Systembolaget's whole catalogue
+(~27 000 products) and cross-check the answers against Vivino.
 
-No account and no API key: the subscription key the site ships publicly is
-built in, and can be overridden with `SYSTEMBOLAGET_API_KEY` if it rotates.
+The recommended way to use this repo is as an **agent skill**: install the two
+CLIs, open Claude Code in this directory, and ask in plain Swedish or English.
+The `sb` and `vivino` CLIs exist to make that possible; you can drive them by
+hand too, but the point is to let the agent do it.
 
-## Installation
+## Using it as an agent skill
 
 ```bash
-uv tool install .   # puts `sb` on your PATH
-sb --help
+uv tool install .   # puts `sb` and `vivino` on your PATH
+claude              # start Claude Code in this directory
 ```
 
-Working on the code instead? `uv run sb ...` runs the CLI straight from the
-checkout, no install needed — that's the form the rest of this README's
-examples omit.
+`.claude/skills/systembolaget/SKILL.md` and `.claude/skills/vivino/SKILL.md`
+are picked up automatically. They teach Claude how to translate Swedish taste
+vocabulary (*fylligt*, *strävt*, *friskt*, *rökigt*, ...) into Systembolaget's
+twelve-point taste clocks, which filter values the API actually accepts, how to
+find drinks that taste like a given one, and how to read Vivino's rating fields
+without being fooled by a thin vintage rating.
 
-## Usage
+### Things you can ask that the website can't answer
+
+The site lets you tick a few filters and scroll. An agent with these tools can
+combine filters freely, compute over the results, compare across sources and
+explain why it picked something.
+
+**Taste, described in words**
+
+- "Ett fylligt, strävt rött till grillat mellan 120 och 180 kr."
+- "Ett torrt vitt med hög syra från Frankrike eller Tyskland, gärna under 150 kr."
+- "Den rökigaste whiskyn under 700 kr."
+- "Ett lätt, friskt rött som går att servera lite kylt."
+- "En riktigt besk IPA, sorterad på pris."
+
+**Similarity**
+
+- "Hitta något som smakar som artikel 262708 men kostar under 120 kr."
+- "Vilka viner har exakt samma smakprofil som den här Barolon?"
+- "Något som liknar det här rödvinet, men det får gärna vara en portvin
+  eller något annat helt — bara smaken stämmer."
+- "Vi gillade det här vinet, vilka andra passar till samma mat och smakar
+  likadant?"
+
+**Cross-checking with Vivino**
+
+- "Ta fram tio Nebbiolo under 250 kr och kolla vilka som har över 4,0 på Vivino."
+- "Vilket av de här tre vinerna får bäst betyg på Vivino, och hur många
+  har betygsatt dem?"
+- "Bästa Vivino-betyg per krona bland Rioja på Systembolaget."
+- "Är det här boxvinet något att ha enligt Vivino, eller finns det ett
+  bättre i samma prisklass?"
+
+**Counting, comparing and ranking**
+
+- "Hur många rödviner passar till vilt, och hur fördelar de sig per land?"
+- "Vilket land har flest ekologiska viner under 100 kr?"
+- "Billigaste flaskan per land bland vita viner med hög syra."
+- "Vilken druva dominerar bland fylliga röda från Spanien?"
+- "Jämför medelpriset på Champagne och Cava i sortimentet."
+- "Lista alla ölstilar som finns och hur många öl det finns i varje."
+
+**Constraints the site doesn't expose together**
+
+- "Alkoholfritt som passar till fisk, under 40 kr."
+- "Ekologiskt vin i box med lägre klimatpåverkan."
+- "Något sött till dessert som inte är portvin och håller under 15 %."
+- "Ett rött med under 3 g/l socker och minst 14 % alkohol."
+
+**Full records and exports**
+
+- "Berätta allt om artikel 262708: druvor, producent, klimat, näringsvärden."
+- "Exportera alla viner från Portugal till en CSV jag kan öppna i Excel."
+- "Ge mig hela sortimentet av whisky som JSON."
+
+Each of these turns into one or a handful of `sb`/`vivino` calls that the
+agent composes, runs and summarises. The sections below document the CLIs
+themselves for when you want to run them directly.
+
+## The `sb` CLI
+
+A Python CLI for searching Systembolaget's catalogue through the same public
+REST API that systembolaget.se uses in the browser. No account and no API key:
+the subscription key the site ships publicly is built in, and can be overridden
+with `SYSTEMBOLAGET_API_KEY` if it rotates.
+
+Working on the code instead of installing? `uv run sb ...` runs the CLI
+straight from the checkout — that's the form the examples below omit.
 
 ```bash
 sb search [TEXT] [FILTERS]   # search on any combination of wishes
@@ -101,6 +172,18 @@ results carry ~70 fields; `sb show` and `sb search --full` fetch the complete
 ~137-field record, adding aroma, raw materials, producer and terroir prose,
 nutrition tables and trivia.
 
+## The `vivino` CLI
+
+`vivino search TEXT` / `vivino show VINTAGE_ID` / `vivino reviews WINE_ID`
+look up ratings and reviews on Vivino, e.g. to check whether a Systembolaget
+find is any good. No account or API key needed.
+
+```bash
+vivino search "Barolo Albe G.D. Vajra"
+vivino show 160828241
+vivino reviews 1100124 -n 5
+```
+
 ## Library use
 
 ```python
@@ -114,23 +197,6 @@ with Client() as client:
     for product in client.iter_products(params, limit=10):
         print(product["productNumber"], product["productNameBold"])
 ```
-
-## Vivino ratings
-
-`vivino search TEXT` / `vivino show VINTAGE_ID` / `vivino reviews WINE_ID`
-look up ratings and reviews on Vivino, e.g. to check whether a Systembolaget
-find is any good. No account or API key needed.
-
-```bash
-uv run vivino search "Barolo Albe G.D. Vajra"
-uv run vivino show 160828241
-```
-
-## Agent skills
-
-`.claude/skills/systembolaget/SKILL.md` and `.claude/skills/vivino/SKILL.md`
-teach Claude Code to drive these CLIs, including how to translate Swedish
-taste vocabulary into filters and how to read Vivino's rating fields.
 
 ## Development
 
