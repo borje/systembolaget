@@ -28,13 +28,16 @@ The site lets you tick a few filters and scroll. An agent with these tools can
 combine filters freely, compute over the results, compare across sources and
 explain why it picked something.
 
-**Taste, described in words**
+**Food pairing, with the wine you actually want**
 
-- "Ett fylligt, strävt rött till grillat mellan 120 och 180 kr."
-- "Ett torrt vitt med hög syra från Frankrike eller Tyskland, gärna under 150 kr."
+- "Vilket rödvin från Italien passar till lamm och rostade rotfrukter?"
+- "Vilket vitt vin från Portugal passar till skaldjur och fisk, under 130 kr?"
+- "Ett spanskt rött till tacos och kryddstark mat, gärna lite fruktigt."
+- "Vilken öl passar till både pizza och hamburgare, och kostar under 30 kr?"
+- "Ett fylligt, strävt rött från Frankrike till grillat och ost, mellan 120
+  och 180 kr."
+- "Ett torrt vitt med hög syra från Tyskland till asiatiskt."
 - "Den rökigaste whiskyn under 700 kr."
-- "Ett lätt, friskt rött som går att servera lite kylt."
-- "En riktigt besk IPA, sorterad på pris."
 
 **Similarity**
 
@@ -65,8 +68,8 @@ explain why it picked something.
 
 **Constraints the site doesn't expose together**
 
-- "Alkoholfritt som passar till fisk, under 40 kr."
-- "Ekologiskt vin i box med lägre klimatpåverkan."
+- "Alkoholfritt från Sverige som passar till fisk, under 40 kr."
+- "Ekologiskt rött i box från Chile eller Argentina till vilt."
 - "Något sött till dessert som inte är portvin och håller under 15 %."
 - "Ett rött med under 3 g/l socker och minst 14 % alkohol."
 
