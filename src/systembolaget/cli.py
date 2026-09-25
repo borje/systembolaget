@@ -29,7 +29,10 @@ from .format import (
 from .search import (
     build_query,
     crawl_all,
+    find_dishes,
+    flatten_dishes,
     rank_by_similarity,
+    resolve_dish,
     similar_query,
     taste_profile,
 )
@@ -97,6 +100,8 @@ def search(
         help="Druva, t.ex. 'Nebbiolo'.")] = None,
     pairs_with: Annotated[list[str] | None, typer.Option("--pairs-with", "-p",
         help="Passar till, t.ex. 'Grillat'. Se 'sb pairings'.")] = None,
+    dish: Annotated[str | None, typer.Option("--dish", "-d",
+        help="Maträtt, namn eller id, t.ex. 'Boeuf bourguignon'. Se 'sb dishes'.")] = None,
     vintage: Annotated[list[str] | None, typer.Option("--vintage", help="Årgång.")] = None,
     assortment: Annotated[list[str] | None, typer.Option("--assortment",
         help="T.ex. 'Fast sortiment'.")] = None,
@@ -180,18 +185,29 @@ def search(
         _fail(str(exc))
         return
 
+    chosen_dish: dict[str, Any] | None = None
     with _client(ctx) as client:
         try:
+            if dish:
+                chosen_dish = resolve_dish(flatten_dishes(client.dishes()), dish)
+                params["dishId"] = str(chosen_dish["dishId"])
             if count_only:
                 console.print(client.count(params))
                 return
             products = list(client.iter_products(params, limit=limit))
             if full:
                 products = [_enrich(client, p) for p in products]
+        except FilterError as exc:
+            _fail(str(exc))
+            return
         except ApiError as exc:
             _fail(str(exc))
             return
 
+    if chosen_dish and fmt == "table":
+        console.print(f"Till [bold cyan]{chosen_dish['dishName']}[/bold cyan]")
+        if chosen_dish.get("dishDescription"):
+            console.print(f"[dim]{chosen_dish['dishDescription']}[/dim]\n")
     _emit(products, fmt, title=f"{len(products)} träffar")
 
 
@@ -376,6 +392,47 @@ def pairings() -> None:
     for symbol in sorted(TASTE_SYMBOLS):
         console.print(f"  {symbol}")
     console.print("\n[dim]Använd med: sb search --pairs-with Grillat[/dim]")
+
+
+@app.command()
+def dishes(
+    ctx: typer.Context,
+    query: Annotated[str | None, typer.Argument(
+        help="Sök på maträtt eller grupp, t.ex. 'gryta' eller 'Vilt'.")] = None,
+    fmt: Annotated[str, typer.Option("--format", "-f", help="table eller json.")] = "table",
+) -> None:
+    """Lista maträtterna i Systembolagets 'Vad passar till?'.
+
+    Varje maträtt har ett id som 'sb search --dish' tar, liksom namnet.
+    Vid exakt en träff visas också Systembolagets dryckesråd.
+    """
+    with _client(ctx) as client:
+        try:
+            found = flatten_dishes(client.dishes())
+        except ApiError as exc:
+            _fail(str(exc))
+            return
+    if query:
+        found = find_dishes(found, query)
+
+    if fmt == "json":
+        dump_json(found)
+        return
+    if not found:
+        _fail(f"Ingen maträtt matchar '{query}'.")
+        return
+
+    from rich.table import Table
+
+    table = Table(title=f"{len(found)} maträtter", header_style="bold cyan")
+    for column in ("Id", "Maträtt", "Grupp"):
+        table.add_column(column, overflow="fold")
+    for entry in found:
+        table.add_row(str(entry["dishId"]), entry["dishName"], entry["dishGroupName"])
+    console.print(table)
+    if len(found) == 1 and found[0].get("dishDescription"):
+        console.print(f"\n[dim]{found[0]['dishDescription']}[/dim]")
+    console.print("\n[dim]Använd med: sb search --dish ID[/dim]")
 
 
 @app.command()

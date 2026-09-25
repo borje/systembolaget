@@ -99,6 +99,7 @@ sb show NUMBER               # everything known about one product
 sb like NUMBER               # drinks that taste like this one
 sb random                    # suggestions when you can't decide
 sb facets [FILTER]           # what values a filter accepts
+sb dishes [QUERY]            # dishes with curated drink lists
 sb pairings                  # the "passar till ..." vocabulary
 sb stores                    # stores and agents
 sb dump                      # download the whole catalogue
@@ -127,6 +128,19 @@ Categorical flags repeat, and repeating means OR.
 
 Which clocks exist depends on the category — `roughness` and `fruitacid` are
 wine-only, `bitterness` is beer-only and `smokiness` is spirits-only.
+
+### Searching by dish
+
+Systembolaget's "Vad passar till?" matcher keeps a curated drink list for
+716 dishes, each with a short note on why the pairing works. `sb dishes`
+searches them, and `--dish` narrows any search to a dish's list:
+
+```bash
+sb dishes bourguignon        # id, group and pairing note
+sb search --dish "Boeuf bourguignon" --subcategory "Rött vin" --price -200
+```
+
+`--dish` takes an id, an exact name, or any fragment that matches one dish.
 
 ### Finding something similar
 

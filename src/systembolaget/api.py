@@ -161,6 +161,19 @@ class Client:
         payload = self.get(f"/v1/site/stores/{product_id}/")
         return payload.get("storeStocks", [])
 
+    def dishes(self) -> list[dict[str, Any]]:
+        """Every dish in the site's "Vad passar till?" matcher.
+
+        Returned as groups (``dishGroupName``) each holding ``dishes`` with
+        ``dishId``, ``dishName`` and ``dishDescription``.  A ``dishId`` goes
+        into a search as the ``dishId`` parameter.
+        """
+        return self.get("/v1/dishes/")
+
+    def dish(self, dish_id: int | str) -> dict[str, Any]:
+        """One dish's name and pairing advice."""
+        return self.get(f"/v1/dish/{dish_id}/")
+
     def store_stock_at(self, site_id: str, product_id: str) -> dict[str, Any]:
         """Stock for one product at one store — cheaper than ``store_stock``
         when only a specific store is of interest.

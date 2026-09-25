@@ -20,7 +20,9 @@ is already active.
 | "Something like this one" | `sb like NUMBER` |
 | "Surprise me" | `sb random` |
 | What values can I filter on? | `sb facets [FILTER]` |
-| Food pairing options | `sb pairings` |
+| Drinks for a named dish | `sb search --dish NAME` |
+| Which dishes Systembolaget has pairing advice for | `sb dishes [QUERY]` |
+| Food pairing symbols | `sb pairings` |
 | Stores and opening addresses | `sb stores` |
 | Which stores have a product in stock right now | `sb stock NUMBER [--store NAME]` |
 | Export the catalogue | `sb dump` |
@@ -55,7 +57,77 @@ Ranges accept `8-12`, `8-` (no upper bound), `-5` (no lower bound) or a bare
 `8` (exact). The same syntax works for `--price` (kr), `--volume` (ml),
 `--alcohol` (%) and `--sugar` (g/l).
 
-"Passar till ..." maps to `--pairs-with`, which takes only these values:
+### Food pairing
+
+Two tools answer "vad passar till ...", and they are strongest together:
+
+- `--dish` — Systembolaget's curated drink list for one of 716 named dishes
+  (the site's "Vad passar till?"), plus a sommelier's note on why.
+  Specific, but hand-picked, so it misses good bottles.
+- `--pairs-with` — the food symbols printed on each product. Broad and
+  consistent, but blind to how the dish is cooked.
+
+Given together they intersect: drinks curated for the dish *and* tagged for
+its main ingredient. For boeuf bourguignon among red wines in the fixed
+assortment, `--dish` gives 540, `--pairs-with Nöt` 509, and both 303.
+
+**1. Find the dish.** Search on its most distinctive word; `sb dishes` matches
+names and groups and prints the note when exactly one dish matches.
+
+```bash
+sb dishes bourguignon          # → 72 Boeuf bourguignon (Nöt), with the note
+sb dishes gryta                # several: pick the closest by name and group
+```
+
+When the exact dish is missing, take the closest one in the same group — a
+*högrevsgryta* serves for a *köttgryta* — or go straight to step 4.
+
+**2. Read the note.** It names the drink types that work (rött vin, mörk ale,
+äppelmust) and the traits that matter. Turn the traits into filters: "syra" →
+`--fruitacid 8-12`, "stramt" → `--roughness 8-12`, "mindre fatkaraktär" →
+`--oaked "Inte fatlagrad"`, "viss sötma" → `--sweetness 3-` (white wine and
+beer; red wine carries no sweetness clock). Keep a trait filter only when
+`--count` shows it narrowing: nearly every red scores 8+ on fruitacid, so
+"syra" sorts whites, not reds. Search each drink type the note names — one
+query for the wine, one for the beer, one for the alcohol-free option — so the
+answer covers what Systembolaget suggests.
+
+**3. Search the intersection**, with the user's own constraints:
+
+```bash
+sb search --dish 72 --pairs-with Nöt --subcategory "Rött vin" \
+  --assortment "Fast sortiment" --price -200 -n 10
+sb search --dish 72 --pairs-with Nöt -c Öl -n 5
+```
+
+Pick the `--pairs-with` value from the dish's group:
+
+| Group | `--pairs-with` |
+|---|---|
+| Nöt, Kalv | `Nöt` |
+| Fläsk, Lamm, Vilt, Fågel, Fisk, Skaldjur, Ost, Pasta, Pizza | same name |
+| Vegetariskt | `Grönsaker` |
+| Buffé | `Buffémat` |
+| Desserter & sötsaker | `Dessert` |
+| Soppor, Paj, Sallad, Omelett | the main ingredient — *fiskgryta* → `Fisk` |
+
+Add a second symbol from the cooking method or spice where it applies —
+grilled → `Grillat`, hot → `Kryddstarkt`, Asian → `Asiatiskt`. Repeated
+`--pairs-with` values OR together, so the second widens the ingredient match
+rather than narrowing it.
+
+**4. Widen when results run thin.** When the intersection plus the user's
+constraints leaves fewer than about five, run `--pairs-with` with the note's
+taste filters and no `--dish`. That keeps the ingredient match and the
+sommelier's reasoning while reaching bottles the curated list left out.
+
+**5. Present across the catalogue.** Spread picks over countries and styles
+unless the user asked for one; the dish's home region is a good *one* of the
+suggestions, not the whole list. Say which picks come from Systembolaget's own
+list for the dish, and pass on the gist of the note.
+
+For food with no named dish — *fredagsmys*, *något till ost* — `--pairs-with`
+alone does the job. The full set of values:
 
 ```
 Grönsaker Fisk Fågel Lamm Fläsk Nöt Vilt Skaldjur Ost Pasta Pizza
@@ -63,10 +135,10 @@ Grillat Hamburgare Kryddstarkt Asiatiskt Buffémat Snacks Dessert
 Aperitif Avec/digestif Drinkingrediens Sällskapsdryck
 ```
 
-Map the dish to the nearest one — *entrecôte* → `Nöt`, *räkor* → `Skaldjur`,
-*curry* → `Kryddstarkt`, *tacos* → `Kryddstarkt`, *fredagsmys* →
-`Sällskapsdryck`. If nothing fits, pass free text as the positional argument
-instead of guessing: `sb search "Hernö" -c Sprit`.
+Map loosely named food to the nearest one — *entrecôte* → `Nöt`, *räkor* →
+`Skaldjur`, *curry* → `Kryddstarkt`, *fredagsmys* → `Sällskapsdryck`. For a
+drink named by brand rather than taste, use free text as the positional
+argument: `sb search "Hernö" -c Sprit`.
 
 Every categorical flag repeats, and repeating it means OR:
 

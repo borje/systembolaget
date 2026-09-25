@@ -193,6 +193,65 @@ def rank_by_similarity(
     return ranked
 
 
+# -- dishes ----------------------------------------------------------------
+
+
+def flatten_dishes(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Turn the grouped ``/v1/dishes/`` payload into one list of dishes.
+
+    Each dish gains a ``dishGroupName`` key, and its name is tidied: the API
+    serves some names with trailing spaces or soft hyphens.
+    """
+    dishes: list[dict[str, Any]] = []
+    for group in groups:
+        group_name = (group.get("dishGroupName") or "").strip()
+        for dish in group.get("dishes") or []:
+            dishes.append({
+                **dish,
+                "dishName": _clean(dish.get("dishName") or ""),
+                "dishGroupName": group_name,
+            })
+    return dishes
+
+
+def _clean(text: str) -> str:
+    return text.replace("\xad", "").strip()
+
+
+def find_dishes(dishes: list[dict[str, Any]], needle: str) -> list[dict[str, Any]]:
+    """Dishes whose name or group contains *needle*, ignoring case."""
+    key = _clean(needle).casefold()
+    return [
+        d for d in dishes
+        if key in d["dishName"].casefold() or key in d["dishGroupName"].casefold()
+    ]
+
+
+def resolve_dish(dishes: list[dict[str, Any]], spec: str) -> dict[str, Any]:
+    """Pick the one dish *spec* names — a ``dishId``, an exact name, or a
+    name fragment that matches a single dish.
+    """
+    text = _clean(spec)
+    if text.isdigit():
+        for dish in dishes:
+            if str(dish.get("dishId")) == text:
+                return dish
+        raise FilterError(f"Ingen maträtt har id {text}. Se 'sb dishes'.")
+
+    exact = [d for d in dishes if d["dishName"].casefold() == text.casefold()]
+    if len(exact) == 1:
+        return exact[0]
+
+    matches = exact or [d for d in dishes if text.casefold() in d["dishName"].casefold()]
+    if len(matches) == 1:
+        return matches[0]
+    if not matches:
+        raise FilterError(f"Ingen maträtt matchar {spec!r}. Se 'sb dishes'.")
+    shown = ", ".join(f"{d['dishName']} ({d['dishId']})" for d in matches[:10])
+    more = f" och {len(matches) - 10} till" if len(matches) > 10 else ""
+    raise FilterError(f"{spec!r} matchar flera maträtter: {shown}{more}. Ange id.")
+
+
 # -- whole catalogue crawling ---------------------------------------------
 
 #: Bucket size below which paging stays reliable.  Beyond roughly this many
