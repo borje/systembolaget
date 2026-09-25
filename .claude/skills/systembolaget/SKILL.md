@@ -239,6 +239,12 @@ sb search --grape Nebbiolo --full -f json -n 20 > nebbiolo.json
 
 `--full` costs one extra request per product, so keep `-n` small.
 
+### Which id
+
+`-f json` has `productNumber` (artikelnummer) and `productId` (internal).
+`sb show`, `like` and `stock` take only `productNumber`; `productId` gives
+`Fel: Not found`.
+
 ## Exporting the catalogue
 
 ```bash
