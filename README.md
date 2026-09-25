@@ -1,4 +1,4 @@
-# systembolaget
+# Claude Château 🍷
 
 Ask Claude Code about drinks, and let it search Systembolaget's whole catalogue
 (~27 000 products) and cross-check the answers against Vivino.
