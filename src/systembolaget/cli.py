@@ -8,7 +8,7 @@ from typing import Annotated, Any
 
 import typer
 
-from .api import ApiError, Client
+from .api import ApiError, Client, NotFound
 from .filters import (
     RANGE_FILTERS,
     SORT_FIELDS,
@@ -22,6 +22,7 @@ from .format import (
     ResultFormat,
     StoreFormat,
     TableFormat,
+    cell,
     console,
     dump_csv,
     dump_json,
@@ -71,6 +72,42 @@ def _emit(products: list[dict[str, Any]], fmt: str, *, title: str | None = None,
 
 def _fail(message: str) -> None:
     err_console.print(f"[red]Fel:[/red] {message}")
+    raise typer.Exit(code=1)
+
+
+def _product(client: Client, number: str) -> dict[str, Any]:
+    """Full record for an artikelnummer, or for the short number people quote.
+
+    2627 is 262708 without its two-digit packaging suffix.  If exactly one
+    article has that short number it is used; if several (sizes, cans vs
+    bottles) they are listed and the command fails.
+    """
+    try:
+        return client.product(number)
+    except NotFound:
+        if not number.isdigit():
+            raise
+        # Text search matches the number anywhere in productNumber, so keep
+        # only exact short matches.  ponytail: capped at 500 hits; one- or
+        # two-digit numbers match thousands and could miss a variant.
+        variants = [
+            p for p in client.iter_products({"textQuery": number}, limit=500)
+            if p.get("productNumberShort") == number
+        ]
+        if not variants:
+            raise
+    if len(variants) == 1:
+        full = variants[0]["productNumber"]
+        err_console.print(f"[dim]{number} → {full}[/dim]")
+        return client.product(full)
+    err_console.print(
+        f"[red]Fel:[/red] {number} är ett kort nummer för {len(variants)} artiklar. "
+        "Ange ett av dem:"
+    )
+    for v in variants:
+        fields = (v["productNumber"], product_name(v), v.get("volumeText") or "",
+                  v.get("packagingLevel1") or "", cell(v, "_price"))
+        print("  " + "\t".join(fields), file=sys.stderr)
     raise typer.Exit(code=1)
 
 
@@ -245,7 +282,7 @@ def show(
     """Visa allt som finns om en produkt."""
     with _client(ctx) as client:
         try:
-            product = client.product(product_number)
+            product = _product(client, product_number)
         except ApiError as exc:
             _fail(str(exc))
             return
@@ -265,7 +302,7 @@ def stock(
     """Visa lagersaldo per butik för en produkt."""
     with _client(ctx) as client:
         try:
-            product = client.product(product_number)
+            product = _product(client, product_number)
             product_id = product["productId"]
             if store:
                 needle = store.casefold()
@@ -346,7 +383,7 @@ def like(
 
     with _client(ctx) as client:
         try:
-            reference = client.product(product_number)
+            reference = _product(client, product_number)
         except ApiError as exc:
             _fail(str(exc))
             return

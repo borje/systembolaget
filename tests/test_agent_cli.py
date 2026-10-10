@@ -127,6 +127,32 @@ def test_product_json_drops_empty_fields():
             assert first(json.loads(result.stdout)) == {**PRODUCT, "tasteClockBitter": 0}
 
 
+def test_short_number_resolves_single_variant():
+    full = {**PRODUCT, "productNumber": "262708", "productNumberShort": "2627"}
+    decoy = {**full, "productNumber": "77262701", "productNumberShort": "772627"}
+    with respx.mock as router:
+        router.get(f"{BASE_URL}/v1/product/productnumber/2627").respond(404)
+        router.get(f"{BASE_URL}/v1/productsearch/search").respond(200, json={
+            "metadata": {"docCount": 2}, "products": [decoy, full]})
+        router.get(f"{BASE_URL}/v1/product/productnumber/262708").respond(200, json=full)
+        result = runner.invoke(cli.app, ["show", "2627", "-f", "json"])
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout)[0]["productNumber"] == "262708"
+
+
+def test_short_number_lists_ambiguous_variants():
+    variants = [{**PRODUCT, "productNumber": number, "productNumberShort": "6671"}
+                for number in ("667101", "667102")]
+    with respx.mock as router:
+        router.get(f"{BASE_URL}/v1/product/productnumber/6671").respond(404)
+        router.get(f"{BASE_URL}/v1/productsearch/search").respond(200, json={
+            "metadata": {"docCount": 2}, "products": variants})
+        result = runner.invoke(cli.app, ["stock", "6671"])
+    assert result.exit_code == 1
+    assert "667101" in result.stderr and "667102" in result.stderr
+    assert not result.stdout
+
+
 def test_dishes_no_match_fails_in_every_format(api):
     for fmt in ("table", "json"):
         assert runner.invoke(cli.app, ["dishes", "nomatch", "-f", fmt]).exit_code == 1

@@ -246,7 +246,11 @@ sb search --grape Nebbiolo --full -f json -n 20 > nebbiolo.json
 
 `-f json` has `productNumber` (artikelnummer) and `productId` (internal).
 `sb show`, `like` and `stock` take only `productNumber`; `productId` gives
-`Fel: Not found`.
+`Fel: Not found`. They also accept the short number people often quote
+(`productNumberShort`, e.g. 2627 for 262708: the last two digits are the
+packaging). One matching article is used directly; several (sizes, can vs
+bottle) are listed on stderr with exit 1, so ask which one, or pick the 750 ml
+bottle when the size doesn't matter.
 
 ## Exporting the catalogue
 
