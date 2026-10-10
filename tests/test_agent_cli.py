@@ -155,6 +155,17 @@ def test_interactive_product_table_still_uses_rich(monkeypatch):
     assert "\t" not in stream.getvalue()
 
 
+def test_non_tty_product_table_adds_grapes_and_taste(monkeypatch):
+    stream = io.StringIO()
+    monkeypatch.setattr(rendering, "console", Console(file=stream))
+    rendering.print_table([{**PRODUCT, "grapes": ["Sangiovese", "Merlot"],
+                            "tasteClockFruitacid": 10}])
+    header, row = csv.reader(io.StringIO(stream.getvalue()), delimiter="\t")
+    row = dict(zip(header, row))
+    assert row["Druvor"] == "Sangiovese, Merlot"
+    assert row["Smak"] == "body=8 fruitacid=10"
+
+
 def test_dump_default_remains_ndjson(api):
     result = runner.invoke(cli.app, ["dump", "-o", "-", "-n", "1"])
     assert result.exit_code == 0, result.output

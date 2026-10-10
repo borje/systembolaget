@@ -72,6 +72,12 @@ TABLE_COLUMNS: tuple[tuple[str, str], ...] = (
     ("Alk", "_alcohol"),
 )
 
+#: Extra columns for piped (agent) output, where width costs nothing.
+TSV_COLUMNS: tuple[tuple[str, str], ...] = (
+    ("Druvor", "_grapes"),
+    ("Smak", "_taste"),
+)
+
 
 def product_name(product: dict[str, Any]) -> str:
     bold = (product.get("productNameBold") or "").strip()
@@ -101,12 +107,26 @@ def _alcohol(product: dict[str, Any]) -> str:
     return f"{value:g}%" if value is not None else ""
 
 
+def _grapes(product: dict[str, Any]) -> str:
+    grapes = product.get("grapes") or []
+    # Search results carry a list, detail records a ";"-joined string.
+    if isinstance(grapes, str):
+        grapes = [g for g in grapes.split(";") if g]
+    return ", ".join(grapes)
+
+
+def _taste(product: dict[str, Any]) -> str:
+    return " ".join(f"{name}={value}" for name, value in taste_profile(product).items())
+
+
 _DERIVED = {
     "_name": product_name,
     "_category": _category,
     "_origin": _origin,
     "_price": _price,
     "_alcohol": _alcohol,
+    "_grapes": _grapes,
+    "_taste": _taste,
 }
 
 
@@ -134,7 +154,8 @@ def print_table(
     # Names and categories are the only columns worth spending width on; the
     # rest are short enough that wrapping them just makes rows taller.
     widths = {"Namn": 34, "Kategori": 22, "Ursprung": 20}
-    for header, _ in TABLE_COLUMNS:
+    columns = TABLE_COLUMNS if console.is_terminal else TABLE_COLUMNS + TSV_COLUMNS
+    for header, _ in columns:
         justify = "right" if header in ("Pris", "Alk", "Volym") else "left"
         table.add_column(
             header,
@@ -146,7 +167,7 @@ def print_table(
 
     rows = []
     for index, product in enumerate(products):
-        row = [cell(product, field) for _, field in TABLE_COLUMNS]
+        row = [cell(product, field) for _, field in columns]
         if scores is not None:
             row.insert(0, f"{scores[index]:.2f}")
         rows.append(row)

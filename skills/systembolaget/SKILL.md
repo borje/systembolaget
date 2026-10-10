@@ -275,6 +275,9 @@ per product, so a whole-catalogue dump runs for hours; use `--category` or
   order the product.
 - Output formats: `table` (default), `json`, `ndjson`, `csv`. Tables are for
   humans; parse `json`/`ndjson`.
+- Piped, the product table is TSV with two extra columns: `Druvor` and `Smak`
+  (taste clocks as `body=8 roughness=8 fruitacid=10 casque=8`; `casque` is
+  fatkaraktär). Enough to shortlist and describe picks without `-f json`.
 - `--sort` accepts `Score`, `Price`, `Vintage`, `Volume`, `Name`,
   `ProductLaunchDate`. Add `--desc` to reverse. Sorting by alcohol is *not*
   supported by the API — filter with `--alcohol` and sort by something else.
