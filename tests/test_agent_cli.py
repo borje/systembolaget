@@ -1,3 +1,4 @@
+import csv
 import io
 import json
 from pathlib import Path
@@ -83,7 +84,14 @@ def test_unsupported_formats_fail_before_network(app, args, formats):
         assert not router.calls
 
 
+def assert_tsv(stdout):
+    """Header plus rows, all the same width: nothing else on stdout."""
+    rows = list(csv.reader(io.StringIO(stdout), delimiter="\t"))
+    assert len(rows) >= 2 and len({len(row) for row in rows}) == 1, rows
+
+
 @pytest.mark.parametrize("args", [["search", "-n", "1"], ["random", "-n", "1"],
+                                  ["search", "--dish", ID, "-n", "1"],
                                   ["like", "1", "-n", "1"], ["stores"], ["dishes"],
                                   ["stock", "1"]])
 def test_sb_non_tty_tables_preserve_names(args, api):
@@ -92,7 +100,7 @@ def test_sb_non_tty_tables_preserve_names(args, api):
     assert NAME in result.stdout
     if args[0] != "stock":
         assert ID in result.stdout
-    assert "\t" in result.stdout
+    assert_tsv(result.stdout)
     if args[0] == "like":
         assert "Likhet" in result.stdout
         assert "0.00" in result.stdout
@@ -104,7 +112,21 @@ def test_vivino_non_tty_table_preserves_names_and_ids(api):
     assert NAME in result.stdout
     assert ID in result.stdout
     assert "98765432109876543210" in result.stdout
-    assert "\t" in result.stdout
+    assert_tsv(result.stdout)
+
+
+def test_dishes_no_match_fails_in_every_format(api):
+    for fmt in ("table", "json"):
+        assert runner.invoke(cli.app, ["dishes", "nomatch", "-f", fmt]).exit_code == 1
+
+
+# country comes from the API response, category from the static fallback.
+@pytest.mark.parametrize("field", ["country", "category"])
+def test_facet_values_share_one_json_shape(field, api):
+    result = runner.invoke(cli.app, ["facets", field, "-f", "json"])
+    assert result.exit_code == 0, result.output
+    values = json.loads(result.stdout)
+    assert values and all(set(item) == {"value", "count"} for item in values)
 
 
 def test_vivino_non_tty_reviews_preserve_literal_text(api):

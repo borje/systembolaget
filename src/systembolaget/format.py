@@ -56,7 +56,7 @@ def print_rows(output: Console, table: Table, rows: Iterable[Sequence[str]]) -> 
         output.print(table)
         return
     if table.title:
-        output.file.write(str(table.title) + "\n")
+        print(table.title, file=sys.stderr)
     writer = csv.writer(output.file, delimiter="\t", lineterminator="\n")
     writer.writerow([column.header for column in table.columns])
     writer.writerows(rows)

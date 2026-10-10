@@ -227,7 +227,7 @@ Supported formats:
 - `vivino search`, `reviews`: table, json; `vivino show`: detail, json.
 
 Interactive table views use Rich. In non-TTY output (pipes, files, agent capture),
-table views write tab-separated headers and rows, with a title when available:
+table views write only tab-separated headers and rows to stdout (titles and hints go to stderr):
 full names, Unicode, literal markup-looking text and IDs are not truncated or
 wrapped, and similarity scores remain included. Fields containing tabs/newlines
 are CSV-quoted; this remains table-like text, not an automatic switch to JSON.

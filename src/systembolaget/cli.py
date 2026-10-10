@@ -208,9 +208,9 @@ def search(
             return
 
     if chosen_dish and fmt == "table":
-        console.print(f"Till [bold cyan]{chosen_dish['dishName']}[/bold cyan]")
+        err_console.print(f"Till [bold cyan]{chosen_dish['dishName']}[/bold cyan]")
         if chosen_dish.get("dishDescription"):
-            console.print(f"[dim]{chosen_dish['dishDescription']}[/dim]\n")
+            err_console.print(f"[dim]{chosen_dish['dishDescription']}[/dim]\n")
     _emit(products, fmt, title=f"{len(products)} träffar")
 
 
@@ -370,7 +370,7 @@ def like(
     profile = ", ".join(f"{k} {v}" for k, v in taste_profile(reference).items())
 
     if fmt == "table":
-        console.print(
+        err_console.print(
             f"Liknar [bold cyan]{product_name(reference)}[/bold cyan] "
             f"[dim]({profile})[/dim]\n"
         )
@@ -419,11 +419,11 @@ def dishes(
     if query:
         found = find_dishes(found, query)
 
-    if fmt == "json":
-        dump_json(found)
-        return
     if not found:
         _fail(f"Ingen maträtt matchar '{query}'.")
+        return
+    if fmt == "json":
+        dump_json(found)
         return
 
     from rich.table import Table
@@ -435,8 +435,8 @@ def dishes(
         (str(entry["dishId"]), entry["dishName"], entry["dishGroupName"]) for entry in found
     ])
     if len(found) == 1 and found[0].get("dishDescription"):
-        console.print(f"\n[dim]{found[0]['dishDescription']}[/dim]")
-    console.print("\n[dim]Använd med: sb search --dish ID[/dim]")
+        err_console.print(f"\n[dim]{found[0]['dishDescription']}[/dim]")
+    err_console.print("\n[dim]Använd med: sb search --dish ID[/dim]")
 
 
 @app.command()
@@ -492,7 +492,7 @@ def facets(
             continue
         modifiers = filter_spec.get("searchModifiers") or []
         if fmt == "json":
-            dump_json(modifiers)
+            dump_json([{"value": m.get("value"), "count": m.get("count")} for m in modifiers])
             return
         console.print(f"[bold cyan]{filter_spec.get('displayName') or field}[/bold cyan]")
         for modifier in modifiers:
@@ -504,7 +504,7 @@ def facets(
 
     if spec.values:
         if fmt == "json":
-            dump_json([{"value": value} for value in spec.values])
+            dump_json([{"value": value, "count": None} for value in spec.values])
             return
         console.print(f"[bold cyan]{field}[/bold cyan] [dim](kända värden)[/dim]")
         for value in spec.values:
