@@ -10,7 +10,8 @@ same public REST API that systembolaget.se uses. No account or API key needed.
 
 Use `sb` if installed and available on PATH; otherwise use `uv run sb` from
 the repository root. Install both CLIs from that root with `uv tool install .`.
-Use `-f json` for agent parsing. Supported formats vary by command.
+Use `-f json` for agent parsing. Supported formats vary by command. Product
+JSON omits null, empty and false fields, so read them with `.get()`.
 
 ## Picking a command
 
@@ -204,7 +205,7 @@ observed from results instead:
 ```bash
 sb search -c Öl --subcategory Ale -n 200 -f json \
   | python3 -c "import json,sys,collections; print(collections.Counter(
-      p['categoryLevel3'] for p in json.load(sys.stdin)).most_common())"
+      p.get('categoryLevel3') for p in json.load(sys.stdin)).most_common())"
 ```
 
 Zero hits almost always means a misspelled value. Suspiciously *many* hits

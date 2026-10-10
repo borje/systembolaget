@@ -115,6 +115,18 @@ def test_vivino_non_tty_table_preserves_names_and_ids(api):
     assert_tsv(result.stdout)
 
 
+def test_product_json_drops_empty_fields():
+    product = {**PRODUCT, "seal": None, "grapes": [], "ethicalLabel": "",
+               "imageModules": {}, "isKosher": False, "tasteClockBitter": 0}
+    with respx.mock as router:
+        router.get(f"{BASE_URL}/v1/productsearch/search").respond(
+            200, json={"metadata": {"docCount": 1}, "products": [product]})
+        for fmt, first in (("json", lambda out: out[0]), ("ndjson", lambda out: out)):
+            result = runner.invoke(cli.app, ["search", "-n", "1", "-f", fmt])
+            assert result.exit_code == 0, result.output
+            assert first(json.loads(result.stdout)) == {**PRODUCT, "tasteClockBitter": 0}
+
+
 def test_dishes_no_match_fails_in_every_format(api):
     for fmt in ("table", "json"):
         assert runner.invoke(cli.app, ["dishes", "nomatch", "-f", fmt]).exit_code == 1

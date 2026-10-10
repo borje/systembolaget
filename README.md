@@ -235,7 +235,8 @@ Prefer `-f json` and bound results with `-n` for agent parsing.
 
 Search results carry ~70 fields; `sb show` and `sb search --full` fetch the complete
 ~137-field record, adding aroma, raw materials, producer and terroir prose,
-nutrition tables and trivia.
+nutrition tables and trivia. Product json/ndjson omits null, empty and false
+fields (zeros are kept); csv keeps every column.
 
 ## The `vivino` CLI
 

@@ -266,6 +266,11 @@ def _detail_value(product: dict[str, Any], key: str) -> str:
 # -- machine-readable output ----------------------------------------------
 
 
+def strip_empty(product: dict[str, Any]) -> dict[str, Any]:
+    """Drop null, empty and False fields; a missing key reads the same.  Keeps 0."""
+    return {k: v for k, v in product.items() if v is not False and v not in (None, "", [], {})}
+
+
 def dump_json(products: Iterable[dict[str, Any]], stream: Any = None) -> None:
     stream = stream or sys.stdout
     json.dump(list(products), stream, ensure_ascii=False, indent=2)

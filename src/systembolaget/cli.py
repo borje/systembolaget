@@ -31,6 +31,7 @@ from .format import (
     print_rows,
     print_table,
     product_name,
+    strip_empty,
 )
 from .search import (
     build_query,
@@ -59,9 +60,9 @@ def _emit(products: list[dict[str, Any]], fmt: str, *, title: str | None = None,
           scores: list[float] | None = None) -> None:
     """Render a result set in the requested format."""
     if fmt == "json":
-        dump_json(products)
+        dump_json(map(strip_empty, products))
     elif fmt == "ndjson":
-        dump_ndjson(products)
+        dump_ndjson(map(strip_empty, products))
     elif fmt == "csv":
         dump_csv(products)
     else:
@@ -249,7 +250,7 @@ def show(
             _fail(str(exc))
             return
     if fmt == "json":
-        dump_json([product])
+        dump_json([strip_empty(product)])
     else:
         print_detail(product)
 
@@ -606,12 +607,12 @@ def dump(
                 products = (_enrich(client, p) for p in products)
 
                 if fmt == "ndjson":
-                    total = dump_ndjson(products, stream)
+                    total = dump_ndjson(map(strip_empty, products), stream)
                 elif fmt == "csv":
                     total = dump_csv(products, stream)
                 else:
                     collected = list(products)
-                    dump_json(collected, stream)
+                    dump_json(map(strip_empty, collected), stream)
                     total = len(collected)
             finally:
                 if stream is not sys.stdout:
