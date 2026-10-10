@@ -141,7 +141,7 @@ def search(
     desc: Annotated[bool, typer.Option("--desc", help="Fallande sortering.")] = False,
     full: Annotated[bool, typer.Option("--full",
         help="Hämta hela produktposten för varje träff (långsammare).")] = False,
-    fmt: Annotated[ResultFormat, typer.Option("--format", "-f", envvar="SB_FORMAT",
+    fmt: Annotated[ResultFormat, typer.Option("--format", "-f",
         help="table, json, ndjson eller csv.")] = "table",
     count_only: Annotated[bool, typer.Option("--count", help="Skriv bara antalet träffar.")] = False,
 ) -> None:
@@ -239,7 +239,7 @@ def _enrich(client: Client, product: dict[str, Any]) -> dict[str, Any]:
 def show(
     ctx: typer.Context,
     product_number: Annotated[str, typer.Argument(help="Artikelnummer, t.ex. 262708.")],
-    fmt: Annotated[DetailFormat, typer.Option("--format", "-f", envvar="SB_FORMAT", help="detail eller json.")] = "detail",
+    fmt: Annotated[DetailFormat, typer.Option("--format", "-f", help="detail eller json.")] = "detail",
 ) -> None:
     """Visa allt som finns om en produkt."""
     with _client(ctx) as client:
@@ -259,7 +259,7 @@ def stock(
     ctx: typer.Context,
     product_number: Annotated[str, typer.Argument(help="Artikelnummer, t.ex. 262708.")],
     store: Annotated[str | None, typer.Option("--store", help="Filtrera på butiksnamn eller ort.")] = None,
-    fmt: Annotated[TableFormat, typer.Option("--format", "-f", envvar="SB_FORMAT", help="table eller json.")] = TableFormat.table,
+    fmt: Annotated[TableFormat, typer.Option("--format", "-f", help="table eller json.")] = TableFormat.table,
 ) -> None:
     """Visa lagersaldo per butik för en produkt."""
     with _client(ctx) as client:
@@ -333,7 +333,7 @@ def like(
         help="Tillåt träffar utanför samma kategori.")] = False,
     match_pairings: Annotated[bool, typer.Option("--match-pairings",
         help="Kräv dessutom samma 'passar till'-symboler.")] = False,
-    fmt: Annotated[ResultFormat, typer.Option("--format", "-f", envvar="SB_FORMAT", help="table, json, ndjson, csv.")] = "table",
+    fmt: Annotated[ResultFormat, typer.Option("--format", "-f", help="table, json, ndjson, csv.")] = "table",
 ) -> None:
     """Hitta drycker med liknande smak som en given produkt.
 
@@ -403,7 +403,7 @@ def dishes(
     ctx: typer.Context,
     query: Annotated[str | None, typer.Argument(
         help="Sök på maträtt eller grupp, t.ex. 'gryta' eller 'Vilt'.")] = None,
-    fmt: Annotated[TableFormat, typer.Option("--format", "-f", envvar="SB_FORMAT", help="table eller json.")] = TableFormat.table,
+    fmt: Annotated[TableFormat, typer.Option("--format", "-f", help="table eller json.")] = TableFormat.table,
 ) -> None:
     """Lista maträtterna i Systembolagets 'Vad passar till?'.
 
@@ -447,7 +447,7 @@ def facets(
     category: Annotated[list[str] | None, typer.Option("--category", "-c",
         help="Begränsa till en kategori.")] = None,
     text: Annotated[str | None, typer.Option("--text", help="Begränsa till en fritextsökning.")] = None,
-    fmt: Annotated[TableFormat, typer.Option("--format", "-f", envvar="SB_FORMAT", help="table eller json.")] = TableFormat.table,
+    fmt: Annotated[TableFormat, typer.Option("--format", "-f", help="table eller json.")] = TableFormat.table,
 ) -> None:
     """Visa vilka värden ett filter kan ta, för det aktuella urvalet.
 
@@ -520,7 +520,7 @@ def facets(
 def stores(
     ctx: typer.Context,
     city: Annotated[str | None, typer.Option("--city", help="Filtrera på ort.")] = None,
-    fmt: Annotated[StoreFormat, typer.Option("--format", "-f", envvar="SB_FORMAT", help="table, json, ndjson.")] = "table",
+    fmt: Annotated[StoreFormat, typer.Option("--format", "-f", help="table, json, ndjson.")] = "table",
 ) -> None:
     """Lista Systembolagets butiker och ombud."""
     with _client(ctx) as client:
@@ -566,7 +566,7 @@ def dump(
         help="Fil att skriva till. '-' för stdout.")] = Path("systembolaget.ndjson"),
     category: Annotated[list[str] | None, typer.Option("--category", "-c",
         help="Begränsa till en kategori.")] = None,
-    fmt: Annotated[DumpFormat, typer.Option("--format", "-f", envvar="SB_FORMAT", help="ndjson, json eller csv.")] = "ndjson",
+    fmt: Annotated[DumpFormat, typer.Option("--format", "-f", help="ndjson, json eller csv.")] = "ndjson",
     limit: Annotated[int | None, typer.Option("--limit", "-n",
         help="Sluta efter N produkter (för test).")] = None,
 ) -> None:
@@ -643,7 +643,7 @@ def random(
         help="Passar till.")] = None,
     price: Annotated[str | None, typer.Option("--price", help="Prisintervall.")] = None,
     limit: Annotated[int, typer.Option("--limit", "-n", help="Antal förslag.")] = 5,
-    fmt: Annotated[ResultFormat, typer.Option("--format", "-f", envvar="SB_FORMAT", help="table, json, ndjson, csv.")] = "table",
+    fmt: Annotated[ResultFormat, typer.Option("--format", "-f", help="table, json, ndjson, csv.")] = "table",
 ) -> None:
     """Slumpa fram förslag — för när man inte vet vad man vill ha."""
     try:

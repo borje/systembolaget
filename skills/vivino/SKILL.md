@@ -10,8 +10,7 @@ own frontend calls. No account or API key needed.
 
 Use `vivino` if installed and available on PATH; otherwise use `uv run vivino`
 from the repository root. Install both CLIs there with `uv tool install .`.
-Prefer `-f json` for agent parsing, or set `VIVINO_FORMAT=json`; explicit `-f`
-overrides the environment. Bound search and review results with `-n`.
+Prefer `-f json` for agent parsing. Bound search and review results with `-n`.
 
 ## Picking a command
 

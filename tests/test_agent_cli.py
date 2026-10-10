@@ -33,14 +33,12 @@ SB_COMMANDS = [
 VIVINO_COMMANDS = [(["search", "wine"], {"table", "json"}),
                    (["show", "1"], {"detail", "json"}),
                    (["reviews", "1"], {"table", "json"})]
-CASES = [(cli.app, "SB_FORMAT", args, formats) for args, formats in SB_COMMANDS] + [
-    (vivino_cli.app, "VIVINO_FORMAT", args, formats) for args, formats in VIVINO_COMMANDS]
+CASES = [(cli.app, args, formats) for args, formats in SB_COMMANDS] + [
+    (vivino_cli.app, args, formats) for args, formats in VIVINO_COMMANDS]
 
 
 @pytest.fixture(autouse=True)
-def clean_format_environment(monkeypatch):
-    monkeypatch.delenv("SB_FORMAT", raising=False)
-    monkeypatch.delenv("VIVINO_FORMAT", raising=False)
+def no_rate_limit_sleep(monkeypatch):
     monkeypatch.setattr("systembolaget.api.time.sleep", lambda _: None)
 
 
@@ -67,28 +65,19 @@ def api():
         yield router
 
 
-@pytest.mark.parametrize("app,env,args,formats", CASES)
-def test_json_environment_default(app, env, args, formats, api):
-    result = runner.invoke(app, args, env={env: "json"})
+@pytest.mark.parametrize("app,args,formats", CASES)
+def test_json_format(app, args, formats, api):
+    result = runner.invoke(app, args + ["-f", "json"])
     assert result.exit_code == 0, result.output
     assert isinstance(json.loads(result.stdout), (list, dict))
 
 
-@pytest.mark.parametrize("app,env,args,formats", CASES)
-def test_explicit_format_overrides_environment(app, env, args, formats, api):
-    result = runner.invoke(app, args + ["-f", "json"], env={env: "invalid"})
-    assert result.exit_code == 0, result.output
-    json.loads(result.stdout)
-
-
-@pytest.mark.parametrize("app,env,args,formats", CASES)
-@pytest.mark.parametrize("source", ["flag", "environment"])
-def test_unsupported_formats_fail_before_network(app, env, args, formats, source):
+@pytest.mark.parametrize("app,args,formats", CASES)
+def test_unsupported_formats_fail_before_network(app, args, formats):
     unsupported = next(value for value in ["csv", "ndjson", "table", "detail", "bogus"]
                        if value not in formats)
     with respx.mock as router:
-        result = runner.invoke(app, args + (["-f", unsupported] if source == "flag" else []),
-                               env={env: unsupported} if source == "environment" else {})
+        result = runner.invoke(app, args + ["-f", unsupported])
         assert result.exit_code == 2, result.output
         assert "Invalid value" in result.output
         assert not router.calls
@@ -161,5 +150,4 @@ def test_repository_agent_skill_layout():
     readme = (root / "README.md").read_text()
     assert "${HERMES_HOME:-$HOME/.hermes}" in readme
     assert "does not automatically discover" in readme
-    assert "SB_FORMAT" in readme and "VIVINO_FORMAT" in readme
     assert "non-TTY" in readme

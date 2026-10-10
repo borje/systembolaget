@@ -10,8 +10,7 @@ same public REST API that systembolaget.se uses. No account or API key needed.
 
 Use `sb` if installed and available on PATH; otherwise use `uv run sb` from
 the repository root. Install both CLIs from that root with `uv tool install .`.
-Use `-f json` for agent parsing, or set `SB_FORMAT=json`; an explicit `-f`
-overrides the environment. Supported formats vary by command.
+Use `-f json` for agent parsing. Supported formats vary by command.
 
 ## Picking a command
 

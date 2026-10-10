@@ -215,10 +215,8 @@ one request per product: a full catalogue takes hours, so narrow it with
 
 ### Output formats
 
-Set `SB_FORMAT=json` and `VIVINO_FORMAT=json` for machine-readable defaults.
-Explicit `--format` / `-f` overrides the environment. With neither set, defaults
-are unchanged: table, except `show` (detail) and `sb dump` (ndjson).
-Unsupported flag or environment values are rejected before API calls.
+Pick with `--format` / `-f`. Defaults: table, except `show` (detail) and
+`sb dump` (ndjson). Unsupported values are rejected before API calls.
 
 Supported formats:
 - `sb search`, `like`, `random`: table, json, ndjson, csv.

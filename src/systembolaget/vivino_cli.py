@@ -43,7 +43,7 @@ def search(
     country: Annotated[str, typer.Option("--country", help="Market for price, e.g. se.")] = "se",
     currency: Annotated[str, typer.Option("--currency")] = "SEK",
     limit: Annotated[int, typer.Option("--limit", "-n")] = 10,
-    fmt: Annotated[TableFormat, typer.Option("--format", "-f", envvar="VIVINO_FORMAT", help="table or json.")] = TableFormat.table,
+    fmt: Annotated[TableFormat, typer.Option("--format", "-f", help="table or json.")] = TableFormat.table,
 ) -> None:
     """Search Vivino by name, producer, grape or region."""
     for t in wine_type or []:
@@ -106,7 +106,7 @@ def _print_matches(matches: list[dict[str, Any]], *, title: str) -> None:
 @app.command()
 def show(
     vintage_id: Annotated[int, typer.Argument(help="Vintage id, from 'vivino search'.")],
-    fmt: Annotated[DetailFormat, typer.Option("--format", "-f", envvar="VIVINO_FORMAT", help="detail or json.")] = DetailFormat.detail,
+    fmt: Annotated[DetailFormat, typer.Option("--format", "-f", help="detail or json.")] = DetailFormat.detail,
 ) -> None:
     """Show a vintage's full detail record."""
     with Client() as client:
@@ -140,7 +140,7 @@ def show(
 def reviews(
     wine_id: Annotated[int, typer.Argument(help="Wine id (not vintage id) from 'vivino search'.")],
     limit: Annotated[int, typer.Option("--limit", "-n")] = 10,
-    fmt: Annotated[TableFormat, typer.Option("--format", "-f", envvar="VIVINO_FORMAT", help="table or json.")] = TableFormat.table,
+    fmt: Annotated[TableFormat, typer.Option("--format", "-f", help="table or json.")] = TableFormat.table,
 ) -> None:
     """List user reviews for a wine."""
     with Client() as client:
