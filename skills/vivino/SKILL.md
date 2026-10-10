@@ -8,8 +8,10 @@ description: Look up wine ratings and reviews on Vivino with the `vivino` CLI. U
 `vivino` searches Vivino's undocumented JSON API — the same one vivino.com's
 own frontend calls. No account or API key needed.
 
-Run it with `uv run vivino` from the project root, or just `vivino` if the
-environment is already active.
+Use `vivino` if installed and available on PATH; otherwise use `uv run vivino`
+from the repository root. Install both CLIs there with `uv tool install .`.
+Prefer `-f json` for agent parsing, or set `VIVINO_FORMAT=json`; explicit `-f`
+overrides the environment. Bound search and review results with `-n`.
 
 ## Picking a command
 

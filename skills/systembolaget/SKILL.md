@@ -8,8 +8,10 @@ description: Search Systembolaget's drink catalogue with the `sb` CLI. Use when 
 `sb` searches the live Systembolaget catalogue (~27 000 products) through the
 same public REST API that systembolaget.se uses. No account or API key needed.
 
-Run it with `uv run sb` from the project root, or just `sb` if the environment
-is already active.
+Use `sb` if installed and available on PATH; otherwise use `uv run sb` from
+the repository root. Install both CLIs from that root with `uv tool install .`.
+Use `-f json` for agent parsing, or set `SB_FORMAT=json`; an explicit `-f`
+overrides the environment. Supported formats vary by command.
 
 ## Picking a command
 
@@ -27,8 +29,9 @@ is already active.
 | Which stores have a product in stock right now | `sb stock NUMBER [--store NAME]` |
 | Export the catalogue | `sb dump` |
 
-Always pass `-n` to bound the result count, and prefer `-f json` when you need
-to compute over the results rather than show them.
+Pass `-n` on search, like, random and dump to bound the result count; commands
+without a limit option should be narrowed with their available filters. Prefer
+`-f json` when computing over results rather than showing them.
 
 ## Translating wishes into filters
 

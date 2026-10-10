@@ -9,6 +9,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from .format import DetailFormat, TableFormat, print_rows
 from .vivino_api import WINE_TYPES, ApiError, Client
 
 app = typer.Typer(
@@ -42,7 +43,7 @@ def search(
     country: Annotated[str, typer.Option("--country", help="Market for price, e.g. se.")] = "se",
     currency: Annotated[str, typer.Option("--currency")] = "SEK",
     limit: Annotated[int, typer.Option("--limit", "-n")] = 10,
-    fmt: Annotated[str, typer.Option("--format", "-f", help="table or json.")] = "table",
+    fmt: Annotated[TableFormat, typer.Option("--format", "-f", envvar="VIVINO_FORMAT", help="table or json.")] = TableFormat.table,
 ) -> None:
     """Search Vivino by name, producer, grape or region."""
     for t in wine_type or []:
@@ -83,12 +84,13 @@ def _print_matches(matches: list[dict[str, Any]], *, title: str) -> None:
     ):
         table.add_column(column, justify=justify, overflow="fold")
 
+    rows = []
     for match in matches:
         vintage = match.get("vintage", {})
         wine = vintage.get("wine", {})
         stats = vintage.get("statistics", {})
         price = (match.get("price") or {}).get("amount")
-        table.add_row(
+        rows.append((
             str(vintage.get("id", "")),
             str(wine.get("id", "")),
             vintage.get("name", ""),
@@ -97,14 +99,14 @@ def _print_matches(matches: list[dict[str, Any]], *, title: str) -> None:
             f"{stats.get('wine_ratings_average', ''):.2f}" if stats.get("wine_ratings_average") else "",
             str(stats.get("wine_ratings_count", "")),
             f"{price:.0f}" if price is not None else "",
-        )
-    console.print(table)
+        ))
+    print_rows(console, table, rows)
 
 
 @app.command()
 def show(
     vintage_id: Annotated[int, typer.Argument(help="Vintage id, from 'vivino search'.")],
-    fmt: Annotated[str, typer.Option("--format", "-f", help="detail or json.")] = "detail",
+    fmt: Annotated[DetailFormat, typer.Option("--format", "-f", envvar="VIVINO_FORMAT", help="detail or json.")] = DetailFormat.detail,
 ) -> None:
     """Show a vintage's full detail record."""
     with Client() as client:
@@ -138,7 +140,7 @@ def show(
 def reviews(
     wine_id: Annotated[int, typer.Argument(help="Wine id (not vintage id) from 'vivino search'.")],
     limit: Annotated[int, typer.Option("--limit", "-n")] = 10,
-    fmt: Annotated[str, typer.Option("--format", "-f", help="table or json.")] = "table",
+    fmt: Annotated[TableFormat, typer.Option("--format", "-f", envvar="VIVINO_FORMAT", help="table or json.")] = TableFormat.table,
 ) -> None:
     """List user reviews for a wine."""
     with Client() as client:
@@ -154,6 +156,15 @@ def reviews(
 
     if not items:
         err_console.print("[yellow]No reviews.[/yellow]")
+        return
+    if not console.is_terminal:
+        table = Table()
+        for header in ("Rating", "User", "Review"):
+            table.add_column(header)
+        print_rows(console, table, [
+            (str(review.get("rating", "")), review.get("user", {}).get("alias", ""),
+             review.get("note") or "") for review in items
+        ])
         return
     for review in items:
         user = review.get("user", {}).get("alias", "")

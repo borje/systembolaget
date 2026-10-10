@@ -6,6 +6,7 @@ import csv
 import json
 import sys
 from collections.abc import Iterable, Sequence
+from enum import StrEnum
 from typing import Any
 
 from rich.console import Console
@@ -16,6 +17,49 @@ from .search import taste_profile
 
 console = Console()
 err_console = Console(stderr=True)
+
+
+class ResultFormat(StrEnum):
+    table = "table"
+    json = "json"
+    ndjson = "ndjson"
+    csv = "csv"
+
+
+class TableFormat(StrEnum):
+    table = "table"
+    json = "json"
+
+
+class DetailFormat(StrEnum):
+    detail = "detail"
+    json = "json"
+
+
+class StoreFormat(StrEnum):
+    table = "table"
+    json = "json"
+    ndjson = "ndjson"
+
+
+class DumpFormat(StrEnum):
+    ndjson = "ndjson"
+    json = "json"
+    csv = "csv"
+
+
+def print_rows(output: Console, table: Table, rows: Iterable[Sequence[str]]) -> None:
+    """Keep Rich tables on terminals, but write lossless text to pipes/files."""
+    if output.is_terminal:
+        for row in rows:
+            table.add_row(*row)
+        output.print(table)
+        return
+    if table.title:
+        output.file.write(str(table.title) + "\n")
+    writer = csv.writer(output.file, delimiter="\t", lineterminator="\n")
+    writer.writerow([column.header for column in table.columns])
+    writer.writerows(rows)
 
 #: Columns shown by the default table view, as (header, product field).
 TABLE_COLUMNS: tuple[tuple[str, str], ...] = (
@@ -100,13 +144,14 @@ def print_table(
             overflow="ellipsis",
         )
 
+    rows = []
     for index, product in enumerate(products):
         row = [cell(product, field) for _, field in TABLE_COLUMNS]
         if scores is not None:
             row.insert(0, f"{scores[index]:.2f}")
-        table.add_row(*row)
+        rows.append(row)
 
-    console.print(table)
+    print_rows(console, table, rows)
 
 
 def print_detail(product: dict[str, Any]) -> None:

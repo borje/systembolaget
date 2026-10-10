@@ -17,12 +17,18 @@ from .filters import (
     FilterError,
 )
 from .format import (
+    DetailFormat,
+    DumpFormat,
+    ResultFormat,
+    StoreFormat,
+    TableFormat,
     console,
     dump_csv,
     dump_json,
     dump_ndjson,
     err_console,
     print_detail,
+    print_rows,
     print_table,
     product_name,
 )
@@ -43,9 +49,6 @@ app = typer.Typer(
     no_args_is_help=True,
     add_completion=False,
 )
-
-Format = str
-
 
 def _client(ctx: typer.Context) -> Client:
     options = ctx.obj or {}
@@ -138,7 +141,7 @@ def search(
     desc: Annotated[bool, typer.Option("--desc", help="Fallande sortering.")] = False,
     full: Annotated[bool, typer.Option("--full",
         help="Hämta hela produktposten för varje träff (långsammare).")] = False,
-    fmt: Annotated[str, typer.Option("--format", "-f",
+    fmt: Annotated[ResultFormat, typer.Option("--format", "-f", envvar="SB_FORMAT",
         help="table, json, ndjson eller csv.")] = "table",
     count_only: Annotated[bool, typer.Option("--count", help="Skriv bara antalet träffar.")] = False,
 ) -> None:
@@ -236,7 +239,7 @@ def _enrich(client: Client, product: dict[str, Any]) -> dict[str, Any]:
 def show(
     ctx: typer.Context,
     product_number: Annotated[str, typer.Argument(help="Artikelnummer, t.ex. 262708.")],
-    fmt: Annotated[str, typer.Option("--format", "-f", help="detail eller json.")] = "detail",
+    fmt: Annotated[DetailFormat, typer.Option("--format", "-f", envvar="SB_FORMAT", help="detail eller json.")] = "detail",
 ) -> None:
     """Visa allt som finns om en produkt."""
     with _client(ctx) as client:
@@ -256,7 +259,7 @@ def stock(
     ctx: typer.Context,
     product_number: Annotated[str, typer.Argument(help="Artikelnummer, t.ex. 262708.")],
     store: Annotated[str | None, typer.Option("--store", help="Filtrera på butiksnamn eller ort.")] = None,
-    fmt: Annotated[str, typer.Option("--format", "-f", help="table eller json.")] = "table",
+    fmt: Annotated[TableFormat, typer.Option("--format", "-f", envvar="SB_FORMAT", help="table eller json.")] = TableFormat.table,
 ) -> None:
     """Visa lagersaldo per butik för en produkt."""
     with _client(ctx) as client:
@@ -304,17 +307,18 @@ def stock(
     table = Table(title=f"{name} — {len(stocks)} butiker i lager", header_style="bold cyan")
     for column in ("Butik", "Adress", "Ort", "Antal", "Hylla"):
         table.add_column(column, overflow="fold")
+    rows = []
     for entry in stocks:
         site = entry["store"]
         balance = entry["stockBalance"]
-        table.add_row(
+        rows.append((
             site.get("alias") or "",
             site.get("address") or "",
             site.get("city") or "",
             str(balance.get("stock", "")),
             balance.get("shelf") or "",
-        )
-    console.print(table)
+        ))
+    print_rows(console, table, rows)
 
 
 @app.command("like")
@@ -329,7 +333,7 @@ def like(
         help="Tillåt träffar utanför samma kategori.")] = False,
     match_pairings: Annotated[bool, typer.Option("--match-pairings",
         help="Kräv dessutom samma 'passar till'-symboler.")] = False,
-    fmt: Annotated[str, typer.Option("--format", "-f", help="table, json, ndjson, csv.")] = "table",
+    fmt: Annotated[ResultFormat, typer.Option("--format", "-f", envvar="SB_FORMAT", help="table, json, ndjson, csv.")] = "table",
 ) -> None:
     """Hitta drycker med liknande smak som en given produkt.
 
@@ -399,7 +403,7 @@ def dishes(
     ctx: typer.Context,
     query: Annotated[str | None, typer.Argument(
         help="Sök på maträtt eller grupp, t.ex. 'gryta' eller 'Vilt'.")] = None,
-    fmt: Annotated[str, typer.Option("--format", "-f", help="table eller json.")] = "table",
+    fmt: Annotated[TableFormat, typer.Option("--format", "-f", envvar="SB_FORMAT", help="table eller json.")] = TableFormat.table,
 ) -> None:
     """Lista maträtterna i Systembolagets 'Vad passar till?'.
 
@@ -427,9 +431,9 @@ def dishes(
     table = Table(title=f"{len(found)} maträtter", header_style="bold cyan")
     for column in ("Id", "Maträtt", "Grupp"):
         table.add_column(column, overflow="fold")
-    for entry in found:
-        table.add_row(str(entry["dishId"]), entry["dishName"], entry["dishGroupName"])
-    console.print(table)
+    print_rows(console, table, [
+        (str(entry["dishId"]), entry["dishName"], entry["dishGroupName"]) for entry in found
+    ])
     if len(found) == 1 and found[0].get("dishDescription"):
         console.print(f"\n[dim]{found[0]['dishDescription']}[/dim]")
     console.print("\n[dim]Använd med: sb search --dish ID[/dim]")
@@ -443,12 +447,22 @@ def facets(
     category: Annotated[list[str] | None, typer.Option("--category", "-c",
         help="Begränsa till en kategori.")] = None,
     text: Annotated[str | None, typer.Option("--text", help="Begränsa till en fritextsökning.")] = None,
+    fmt: Annotated[TableFormat, typer.Option("--format", "-f", envvar="SB_FORMAT", help="table eller json.")] = TableFormat.table,
 ) -> None:
     """Visa vilka värden ett filter kan ta, för det aktuella urvalet.
 
     Utan argument listas alla tillgängliga filter.
     """
     if field is None:
+        if fmt == "json":
+            dump_json([
+                {"name": name, "kind": "term", "help": spec.help, "values": spec.values}
+                for name, spec in TERM_FILTERS.items()
+            ] + [
+                {"name": name, "kind": "range", "help": spec.help, "unit": spec.unit}
+                for name, spec in RANGE_FILTERS.items()
+            ])
+            return
         console.print("[bold cyan]Kategoriska filter[/bold cyan] (kan upprepas)")
         for name, spec in TERM_FILTERS.items():
             values = f" — {', '.join(spec.values)}" if spec.values else ""
@@ -477,6 +491,9 @@ def facets(
         if filter_spec.get("name", "").lower() != wanted:
             continue
         modifiers = filter_spec.get("searchModifiers") or []
+        if fmt == "json":
+            dump_json(modifiers)
+            return
         console.print(f"[bold cyan]{filter_spec.get('displayName') or field}[/bold cyan]")
         for modifier in modifiers:
             count = modifier.get("count")
@@ -486,6 +503,9 @@ def facets(
         return
 
     if spec.values:
+        if fmt == "json":
+            dump_json([{"value": value} for value in spec.values])
+            return
         console.print(f"[bold cyan]{field}[/bold cyan] [dim](kända värden)[/dim]")
         for value in spec.values:
             console.print(f"  {value}")
@@ -500,7 +520,7 @@ def facets(
 def stores(
     ctx: typer.Context,
     city: Annotated[str | None, typer.Option("--city", help="Filtrera på ort.")] = None,
-    fmt: Annotated[str, typer.Option("--format", "-f", help="table, json, ndjson.")] = "table",
+    fmt: Annotated[StoreFormat, typer.Option("--format", "-f", envvar="SB_FORMAT", help="table, json, ndjson.")] = "table",
 ) -> None:
     """Lista Systembolagets butiker och ombud."""
     with _client(ctx) as client:
@@ -526,16 +546,17 @@ def stores(
     table = Table(title=f"{len(sites)} butiker", header_style="bold cyan")
     for column in ("Nr", "Namn", "Adress", "Ort", "Län", "Typ"):
         table.add_column(column, overflow="fold")
+    rows = []
     for site in sites:
-        table.add_row(
+        rows.append((
             site.get("siteId") or "",
             site.get("displayName") or site.get("alias") or "",
             site.get("streetAddress") or "",
             site.get("city") or "",
             site.get("county") or "",
             "Ombud" if site.get("isAgent") else "Butik",
-        )
-    console.print(table)
+        ))
+    print_rows(console, table, rows)
 
 
 @app.command()
@@ -545,7 +566,7 @@ def dump(
         help="Fil att skriva till. '-' för stdout.")] = Path("systembolaget.ndjson"),
     category: Annotated[list[str] | None, typer.Option("--category", "-c",
         help="Begränsa till en kategori.")] = None,
-    fmt: Annotated[str, typer.Option("--format", "-f", help="ndjson, json eller csv.")] = "ndjson",
+    fmt: Annotated[DumpFormat, typer.Option("--format", "-f", envvar="SB_FORMAT", help="ndjson, json eller csv.")] = "ndjson",
     limit: Annotated[int | None, typer.Option("--limit", "-n",
         help="Sluta efter N produkter (för test).")] = None,
 ) -> None:
@@ -622,6 +643,7 @@ def random(
         help="Passar till.")] = None,
     price: Annotated[str | None, typer.Option("--price", help="Prisintervall.")] = None,
     limit: Annotated[int, typer.Option("--limit", "-n", help="Antal förslag.")] = 5,
+    fmt: Annotated[ResultFormat, typer.Option("--format", "-f", envvar="SB_FORMAT", help="table, json, ndjson, csv.")] = "table",
 ) -> None:
     """Slumpa fram förslag — för när man inte vet vad man vill ha."""
     try:
@@ -640,7 +662,7 @@ def random(
         except ApiError as exc:
             _fail(str(exc))
             return
-    print_table(products, title="Slumpade förslag")
+    _emit(products, fmt, title="Slumpade förslag")
 
 
 if __name__ == "__main__":

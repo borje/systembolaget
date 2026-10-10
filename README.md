@@ -1,26 +1,57 @@
 # Claude Château 🍷
 
-Ask Claude Code about drinks, and let it search Systembolaget's whole catalogue
-(~27 000 products) and cross-check the answers against Vivino.
+Search Systembolaget's whole catalogue (~27 000 products) and cross-check wines
+against Vivino, directly from the command line or with an AI agent. Ask in plain
+Swedish or English; the agent can compose the `sb` and `vivino` calls for you.
 
-The recommended way to use this repo is as an **agent skill**: install the two
-CLIs, open Claude Code in this directory, and ask in plain Swedish or English.
-The `sb` and `vivino` CLIs exist to make that possible; you can drive them by
-hand too, but the point is to let the agent do it.
+## Using it as agent skills
 
-## Using it as an agent skill
+From the repository root:
 
 ```bash
 uv tool install .   # puts `sb` and `vivino` on your PATH
-claude              # start Claude Code in this directory
 ```
 
-`.claude/skills/systembolaget/SKILL.md` and `.claude/skills/vivino/SKILL.md`
-are picked up automatically. They teach Claude how to translate Swedish taste
-vocabulary (*fylligt*, *strävt*, *friskt*, *rökigt*, ...) into Systembolaget's
-twelve-point taste clocks, which filter values the API actually accepts, how to
-find drinks that taste like a given one, and how to read Vivino's rating fields
-without being fooled by a thin vintage rating.
+If the CLIs are not installed, run `uv run sb ...` or `uv run vivino ...` from
+the repository root instead. The canonical agent-neutral skills are
+[skills/systembolaget/SKILL.md](skills/systembolaget/SKILL.md) and
+[skills/vivino/SKILL.md](skills/vivino/SKILL.md); [AGENTS.md](AGENTS.md) is the
+short repository guide. They explain Swedish taste vocabulary, the twelve-point
+taste clocks, valid filters, similarity queries, and Vivino's rating fields.
+
+### Claude Code and Pi
+
+Start `claude` in this directory: `.claude/skills/systembolaget` and
+`.claude/skills/vivino` are relative symlinks to the canonical skills, preserving
+Claude's discovery. Pi's `.pi/settings.json` points to `../skills`.
+
+### Hermes Agent
+
+Hermes does not automatically discover arbitrary repository skills. To install
+these manually, run the following from this repository root. This creates links
+only when no existing file, directory or symlink has that name:
+
+```bash
+repo="$PWD"
+skill_dir="${HERMES_HOME:-$HOME/.hermes}/skills"
+mkdir -p "$skill_dir"
+for name in systembolaget vivino; do
+  target="$skill_dir/$name"
+  if [ -e "$target" ] || [ -L "$target" ]; then
+    printf 'Skipping existing skill: %s\n' "$target"
+  else
+    ln -s "$repo/skills/$name" "$target"
+  fi
+done
+hermes skills list
+hermes -s systembolaget -s vivino
+```
+
+For a named profile, set `HERMES_HOME` to that profile's home (for example
+`$HOME/.hermes/profiles/wine`) before installing, then launch with
+`hermes --profile wine -s systembolaget -s vivino`. In an existing Hermes session,
+use `/reload-skills`, then `/skill systembolaget` or `/skill vivino`.
+Keep the checkout in place while these symlinks are installed.
 
 ### Things you can ask that the website can't answer
 
@@ -184,8 +215,27 @@ one request per product: a full catalogue takes hours, so narrow it with
 
 ### Output formats
 
-`--format table` (default, for humans), `json`, `ndjson` or `csv`. Search
-results carry ~70 fields; `sb show` and `sb search --full` fetch the complete
+Set `SB_FORMAT=json` and `VIVINO_FORMAT=json` for machine-readable defaults.
+Explicit `--format` / `-f` overrides the environment. With neither set, defaults
+are unchanged: table, except `show` (detail) and `sb dump` (ndjson).
+Unsupported flag or environment values are rejected before API calls.
+
+Supported formats:
+- `sb search`, `like`, `random`: table, json, ndjson, csv.
+- `sb show`: detail, json.
+- `sb stock`, `dishes`, `facets`: table, json.
+- `sb stores`: table, json, ndjson.
+- `sb dump`: ndjson, json, csv (choose `-o` yourself; the filename is not changed).
+- `vivino search`, `reviews`: table, json; `vivino show`: detail, json.
+
+Interactive table views use Rich. In non-TTY output (pipes, files, agent capture),
+table views write tab-separated headers and rows, with a title when available:
+full names, Unicode, literal markup-looking text and IDs are not truncated or
+wrapped, and similarity scores remain included. Fields containing tabs/newlines
+are CSV-quoted; this remains table-like text, not an automatic switch to JSON.
+Prefer `-f json` and bound results with `-n` for agent parsing.
+
+Search results carry ~70 fields; `sb show` and `sb search --full` fetch the complete
 ~137-field record, adding aroma, raw materials, producer and terroir prose,
 nutrition tables and trivia.
 
@@ -218,7 +268,8 @@ with Client() as client:
 ## Development
 
 ```bash
-uv run pytest
+uv run pytest -q
+uv run ruff check .
 ```
 
 Tests mock the HTTP layer with `respx` and make no network calls.

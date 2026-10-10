@@ -1,0 +1,165 @@
+import io
+import json
+from pathlib import Path
+
+import pytest
+import respx
+from rich.console import Console
+from typer.testing import CliRunner
+
+from systembolaget import cli, vivino_cli
+from systembolaget import format as rendering
+from systembolaget.api import BASE_URL
+from systembolaget.vivino_api import BASE_URL as VIVINO_URL
+
+runner = CliRunner()
+NAME = ("Å Château [bold]庄园[/bold] " + "Extraordinary vineyard name " * 8).strip()
+ID = "12345678901234567890"
+PRODUCT = {"productNumber": ID, "productId": "p", "productNameBold": NAME,
+           "categoryLevel1": "Vin", "tasteClockBody": 8}
+MATCH = {"vintage": {"id": int(ID), "name": NAME, "wine": {"id": 98765432109876543210}}}
+SB_COMMANDS = [
+    (["search", "-n", "1"], {"table", "json", "ndjson", "csv"}),
+    (["show", "1"], {"detail", "json"}),
+    (["stock", "1"], {"table", "json"}),
+    (["like", "1", "-n", "1"], {"table", "json", "ndjson", "csv"}),
+    (["dishes"], {"table", "json"}),
+    (["facets", "country"], {"table", "json"}),
+    (["facets"], {"table", "json"}),
+    (["stores"], {"table", "json", "ndjson"}),
+    (["dump", "-o", "-", "-n", "1"], {"json", "ndjson", "csv"}),
+    (["random", "-n", "1"], {"table", "json", "ndjson", "csv"}),
+]
+VIVINO_COMMANDS = [(["search", "wine"], {"table", "json"}),
+                   (["show", "1"], {"detail", "json"}),
+                   (["reviews", "1"], {"table", "json"})]
+CASES = [(cli.app, "SB_FORMAT", args, formats) for args, formats in SB_COMMANDS] + [
+    (vivino_cli.app, "VIVINO_FORMAT", args, formats) for args, formats in VIVINO_COMMANDS]
+
+
+@pytest.fixture(autouse=True)
+def clean_format_environment(monkeypatch):
+    monkeypatch.delenv("SB_FORMAT", raising=False)
+    monkeypatch.delenv("VIVINO_FORMAT", raising=False)
+    monkeypatch.setattr("systembolaget.api.time.sleep", lambda _: None)
+
+
+@pytest.fixture
+def api():
+    with respx.mock as router:
+        router.get(f"{BASE_URL}/v1/productsearch/search").respond(200, json={
+            "metadata": {"docCount": 1}, "products": [PRODUCT],
+            "filters": [{"name": "country", "searchModifiers": [{"value": "Sverige", "count": 1}]}],
+        })
+        router.get(f"{BASE_URL}/v1/product/productnumber/1").respond(
+            200, json={**PRODUCT, "productNumber": "1"})
+        router.get(f"{BASE_URL}/v1/product/productnumber/{ID}").respond(200, json=PRODUCT)
+        router.get(f"{BASE_URL}/v1/site/stores/p/").respond(200, json={"storeStocks": [
+            {"store": {"alias": NAME}, "stockBalance": {"stock": 1}}]})
+        router.get(f"{BASE_URL}/v1/sitesearch/site/").respond(200, json={"siteSearchResults": [
+            {"siteId": ID, "displayName": NAME}]})
+        router.get(f"{BASE_URL}/v1/dishes/").respond(200, json=[{
+            "dishGroupName": "Grupp", "dishes": [{"dishId": ID, "dishName": NAME}]}])
+        router.get(f"{VIVINO_URL}/explore/explore").respond(200, json={
+            "explore_vintage": {"matches": [MATCH]}})
+        router.get(f"{VIVINO_URL}/vintages/1").respond(200, json={"vintage": MATCH["vintage"]})
+        router.get(f"{VIVINO_URL}/wines/1/reviews").respond(200, json={"reviews": [{"note": NAME}]})
+        yield router
+
+
+@pytest.mark.parametrize("app,env,args,formats", CASES)
+def test_json_environment_default(app, env, args, formats, api):
+    result = runner.invoke(app, args, env={env: "json"})
+    assert result.exit_code == 0, result.output
+    assert isinstance(json.loads(result.stdout), (list, dict))
+
+
+@pytest.mark.parametrize("app,env,args,formats", CASES)
+def test_explicit_format_overrides_environment(app, env, args, formats, api):
+    result = runner.invoke(app, args + ["-f", "json"], env={env: "invalid"})
+    assert result.exit_code == 0, result.output
+    json.loads(result.stdout)
+
+
+@pytest.mark.parametrize("app,env,args,formats", CASES)
+@pytest.mark.parametrize("source", ["flag", "environment"])
+def test_unsupported_formats_fail_before_network(app, env, args, formats, source):
+    unsupported = next(value for value in ["csv", "ndjson", "table", "detail", "bogus"]
+                       if value not in formats)
+    with respx.mock as router:
+        result = runner.invoke(app, args + (["-f", unsupported] if source == "flag" else []),
+                               env={env: unsupported} if source == "environment" else {})
+        assert result.exit_code == 2, result.output
+        assert "Invalid value" in result.output
+        assert not router.calls
+
+
+@pytest.mark.parametrize("args", [["search", "-n", "1"], ["random", "-n", "1"],
+                                  ["like", "1", "-n", "1"], ["stores"], ["dishes"],
+                                  ["stock", "1"]])
+def test_sb_non_tty_tables_preserve_names(args, api):
+    result = runner.invoke(cli.app, args, env={"COLUMNS": "30"})
+    assert result.exit_code == 0, result.output
+    assert NAME in result.stdout
+    if args[0] != "stock":
+        assert ID in result.stdout
+    assert "\t" in result.stdout
+    if args[0] == "like":
+        assert "Likhet" in result.stdout
+        assert "0.00" in result.stdout
+
+
+def test_vivino_non_tty_table_preserves_names_and_ids(api):
+    result = runner.invoke(vivino_cli.app, ["search", "wine"], env={"COLUMNS": "30"})
+    assert result.exit_code == 0, result.output
+    assert NAME in result.stdout
+    assert ID in result.stdout
+    assert "98765432109876543210" in result.stdout
+    assert "\t" in result.stdout
+
+
+def test_vivino_non_tty_reviews_preserve_literal_text(api):
+    result = runner.invoke(vivino_cli.app, ["reviews", "1"])
+    assert result.exit_code == 0
+    assert NAME in result.stdout
+
+
+def test_interactive_product_table_still_uses_rich(monkeypatch):
+    stream = io.StringIO()
+    monkeypatch.setattr(rendering, "console", Console(file=stream, force_terminal=True, width=100))
+    rendering.print_table([PRODUCT])
+    assert "┏" in stream.getvalue()
+    assert "\t" not in stream.getvalue()
+
+
+def test_dump_default_remains_ndjson(api):
+    result = runner.invoke(cli.app, ["dump", "-o", "-", "-n", "1"])
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout) == PRODUCT
+
+
+def test_repository_agent_skill_layout():
+    root = Path(__file__).resolve().parents[1]
+    agents = (root / "AGENTS.md").read_text()
+    for name in ("systembolaget", "vivino"):
+        canonical = root / "skills" / name
+        compatibility = root / ".claude" / "skills" / name
+        assert compatibility.is_symlink()
+        assert compatibility.readlink() == Path(f"../../skills/{name}")
+        assert compatibility.resolve() == canonical
+        skill = (canonical / "SKILL.md").read_text()
+        assert skill.startswith(f"---\nname: {name}\n")
+        assert f"skills/{name}/SKILL.md" in agents
+        assert "on PATH" in skill
+    assert json.loads((root / ".pi/settings.json").read_text())["skills"] == ["../skills"]
+    assert "uv tool install ." in agents
+    assert "uv run" in agents
+    assert "-f json" in agents
+    assert "--limit" in agents
+    assert "uv run pytest -q" in agents
+    assert "uv run ruff check ." in agents
+    readme = (root / "README.md").read_text()
+    assert "${HERMES_HOME:-$HOME/.hermes}" in readme
+    assert "does not automatically discover" in readme
+    assert "SB_FORMAT" in readme and "VIVINO_FORMAT" in readme
+    assert "non-TTY" in readme
